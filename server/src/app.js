@@ -47,7 +47,7 @@ export function createApp({ env = process.env, health = createHealth({ env }) } 
 
   const api = express.Router();
   const small = express.json({ limit: '16kb' });
-  api.use(sameOriginWrites());
+  api.use(sameOriginWrites(env));
   api.use('/health', health.router);
   api.use('/gateway', createGatewayRouter({ getMode: () => modeView().source, env }));
 
