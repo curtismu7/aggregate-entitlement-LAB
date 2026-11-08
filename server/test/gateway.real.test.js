@@ -170,3 +170,11 @@ test('realConfig and readRefusal', () => {
   assert.equal(readRefusal({ message: 'connect m: failed to connect: Internal Server Error' }), 'unreachable');
   assert.equal(readRefusal({ message: 'something else' }), 'other');
 });
+
+test('realConfig carries the operator\'s version label, and drops one that is not a plain label', () => {
+  const base = { AGG_ENT_GW_URL: 'https://gw.example.invalid', AGG_ENT_GW_APPS: 'a', AGG_ENT_GW_KEY_X: 'k' };
+  assert.equal(realConfig({ ...base, AGG_ENT_GW_VERSION: 'v1.261106' }).version, 'v1.261106');
+  assert.equal(realConfig(base).version, null);
+  assert.equal(realConfig({ ...base, AGG_ENT_GW_VERSION: '<img src=x onerror=1>' }).version, null);
+  assert.equal(realConfig({ ...base, AGG_ENT_GW_VERSION: 'v'.repeat(41) }).version, null);
+});

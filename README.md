@@ -4,7 +4,7 @@ Tier: Tester
 
 Repo: https://github.com/curtismu7/aggregate-entitlement-LAB
 
-An MCP aggregate puts several MCP servers behind one gateway URL. Without a filter, every agent that connects sees every tool from every server. **Ping release claim (2026-11-02), UNVERIFIED on our tenant:** the gateway lists only the tools each caller is entitled to, refuses a hidden tool when it is called by name, and caps every member tool with one aggregate policy that is checked on the list and again at the member hop. This lab teaches that on one page, and lets you check it.
+An MCP aggregate puts several MCP servers behind one gateway URL. Without a filter, every agent that connects sees every tool from every server. **Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), per-caller entitlement UNVERIFIED on our tenant:** the gateway lists only the tools each caller is entitled to, refuses a hidden tool when it is called by name, and caps every member tool with one aggregate policy that is checked on the list and again at the member hop. This lab teaches that on one page, and lets you check it.
 
 - **Mock** simulates the claim in this process (nothing leaves your computer). Three invented members (crm, bill, wiki) and three callers (Analyst, Operator, Guest); edit the member policy, the ToolFilter and the aggregate cap and watch the lists change.
 - **Real** (header toggle) asks your own gateway's MCP aggregate apps with your agent keys: it compares what each app lists for the same key, and calls a hidden name to see the gateway refuse it. It never calls a tool the key can see.
@@ -53,9 +53,10 @@ Read from the process environment, then `STANDALONE_ENV`, then `~/Development/.e
 | --- | --- |
 | `AGG_ENT_GW_URL` | The gateway origin (https, or http on loopback). Each app is at `<origin>/<app>/mcp`. |
 | `AGG_ENT_GW_APPS` | Comma-separated MCP aggregate app names to compare. |
+| `AGG_ENT_GW_VERSION` | Optional label for the gateway image you are measuring, such as `v1.261106`. The gateway does not report it over MCP, so this is what you say it is; the Real tab shows it. |
 | `AGG_ENT_GW_KEY_<NAME>` | One agent access key per caller. `NAME` becomes the caller's label. Write-only: never returned, shown or logged. |
 
-For Docker, put the same names in the environment of `docker compose` (the compose file passes `AGG_ENT_GW_URL`, `AGG_ENT_GW_APPS` and the keys `_ANALYST`, `_OPERATOR`, `_GUEST` and `_LAB_AGENT`). Real is owner-run: agents use the Mock.
+For Docker, put the same names in the environment of `docker compose` (the compose file passes `AGG_ENT_GW_URL`, `AGG_ENT_GW_APPS`, `AGG_ENT_GW_VERSION` and the keys `_ANALYST`, `_OPERATOR`, `_GUEST` and `_LAB_AGENT`). Real is owner-run: agents use the Mock.
 
 ## Test
 

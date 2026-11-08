@@ -1,6 +1,6 @@
 # Talk track: Aggregate entitlement lab
 
-Each `##` heading is one presenter step. A Tester-tier lab: see how an MCP aggregate lists only what each caller may use, then check your own gateway. Every product claim here is a Ping release claim (2026-11-02), UNVERIFIED on our tenant. Say that first, and point at the banner that says it on every page.
+Each `##` heading is one presenter step. A Tester-tier lab: see how an MCP aggregate lists only what each caller may use, then check your own gateway. Every product claim here is a Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), per-caller entitlement UNVERIFIED on our tenant. Say that first, and point at the banner that says it on every page.
 
 ## The pitch in one line
 

@@ -17,6 +17,7 @@ services:
       LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-aggregate-entitlement-lab.local.ping-devops.com}
       AGG_ENT_GW_URL: ${AGG_ENT_GW_URL:-}
       AGG_ENT_GW_APPS: ${AGG_ENT_GW_APPS:-}
+      AGG_ENT_GW_VERSION: ${AGG_ENT_GW_VERSION:-}
       AGG_ENT_GW_KEY_ANALYST: ${AGG_ENT_GW_KEY_ANALYST:-}
       AGG_ENT_GW_KEY_OPERATOR: ${AGG_ENT_GW_KEY_OPERATOR:-}
       AGG_ENT_GW_KEY_GUEST: ${AGG_ENT_GW_KEY_GUEST:-}

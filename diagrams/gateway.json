@@ -2,7 +2,7 @@
   "schema": "diagram-studio/1",
   "id": "gateway",
   "title": "Entitled listing and aggregate cap",
-  "lede": "Ping release claim (2026-11-02), UNVERIFIED on our tenant. A caller asks the gateway what it may use and gets only its own tools; a hidden tool is refused when called by name; the aggregate's policy cap is checked on the list and again at the member hop.",
+  "lede": "Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), per-caller entitlement UNVERIFIED on our tenant. A caller asks the gateway what it may use and gets only its own tools; a hidden tool is refused when called by name; the aggregate's policy cap is checked on the list and again at the member hop.",
   "groups": {
     "caller": { "label": "Caller", "color": "dark" },
     "gateway": { "label": "Gateway", "color": "red" },
