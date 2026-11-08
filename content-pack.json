@@ -6,7 +6,7 @@
   "demo": {
     "id": "aggregate-entitlement",
     "name": "Aggregate entitlement lab",
-    "catalog": "D999",
+    "catalog": "D125",
     "baseUrl": "http://localhost:7802",
     "doctor": "/api/health",
     "tags": [

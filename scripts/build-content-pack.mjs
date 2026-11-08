@@ -46,7 +46,7 @@ export function buildPack({ commit } = {}) {
     title: 'Aggregate entitlement lab',
     version: pkg.version,
     ...(commit ? { source: { repo: 'aggregate-entitlement-LAB', commit } } : {}),
-    demo: { id: 'aggregate-entitlement', name: 'Aggregate entitlement lab', catalog: 'D999', baseUrl: 'http://localhost:7802', doctor: '/api/health', tags: ['mcp', 'mcp-aggregate', 'entitlement', 'agent-gateway'] },
+    demo: { id: 'aggregate-entitlement', name: 'Aggregate entitlement lab', catalog: 'D125', baseUrl: 'http://localhost:7802', doctor: '/api/health', tags: ['mcp', 'mcp-aggregate', 'entitlement', 'agent-gateway'] },
     glossary: readJson('content/terms.json').sort(byId),
     sources: [{ id: 'mcp-home', title: 'Model Context Protocol', url: 'https://modelcontextprotocol.io', kind: 'website', use: 'Named as the MCP home page in the README of mcp-tools-LAB, which this lab was forked from. Not quoted here.', status: 'not-read', checked: '2026-10-21' }],
     cards: CARDS.map(({ href, ...c }) => ({ ...c, action: { type: 'route', href } })).sort(byId),
