@@ -41,3 +41,48 @@ test('same-origin writes: GET is free; a write needs an Origin equal to Host', a
   assert.equal((await run(mw, { method: 'DELETE', headers: { host: 'localhost:1', origin: 'http://localhost:2' } })).code, 403);
   assert.equal((await run(mw, { method: 'POST', headers: { host: 'localhost:1', origin: 'null' } })).code, 403);
 });
+
+test('behind the lab-proxy: a write is accepted only with the proxy\'s forwarded origin AND a listed Host', async () => {
+  const env = { LAB_ALLOWED_HOSTS: 'aggregate-entitlement-lab.local.ping-devops.com' };
+  const mw = sameOriginWrites(env);
+  const proxyHost = 'aggregate-entitlement-lab.local.ping-devops.com:7802';
+  const fwd = { 'x-forwarded-host': 'local.ping-devops.com:8443', 'x-forwarded-proto': 'https' };
+  const via = (headers, host = proxyHost, m = mw) => run(m, { method: 'POST', headers: { host, ...headers } });
+  // what the browser and the proxy really send for a same-origin POST
+  assert.equal((await via({ ...fwd, origin: 'https://local.ping-devops.com:8443', 'sec-fetch-site': 'same-origin' })).code, 200);
+  assert.equal((await via({ ...fwd, origin: 'https://local.ping-devops.com:8443' })).code, 200);
+  assert.equal((await via({ 'x-forwarded-host': 'local.ping-devops.com:8443', origin: 'https://local.ping-devops.com:8443' })).code, 200, 'proto defaults to https');
+  // refused: a foreign origin, a mismatched forwarded host, a wrong scheme, a cross-site fetch, no forwarded host at all
+  for (const headers of [
+    { ...fwd, origin: 'https://evil.example' },
+    { ...fwd, origin: 'https://local.ping-devops.com:9999' },
+    { ...fwd, origin: 'http://local.ping-devops.com:8443' },
+    { ...fwd, origin: 'https://local.ping-devops.com:8443', 'sec-fetch-site': 'cross-site' },
+    { origin: 'https://local.ping-devops.com:8443' },
+    { 'x-forwarded-host': 'evil.example', 'x-forwarded-proto': 'https', origin: 'https://local.ping-devops.com:8443' },
+    { ...fwd, 'x-forwarded-proto': 'ftp', origin: 'ftp://local.ping-devops.com:8443' },
+  ]) assert.equal((await via(headers)).code, 403, JSON.stringify(headers));
+  // the forwarded headers are not believed on a loopback Host, nor on an unlisted one
+  for (const host of ['127.0.0.1:7802', 'localhost:7802', 'other.example:7802']) {
+    assert.equal((await via({ ...fwd, origin: 'https://local.ping-devops.com:8443' }, host)).code, 403, host);
+  }
+  // and without LAB_ALLOWED_HOSTS the same request is refused
+  assert.equal((await via({ ...fwd, origin: 'https://local.ping-devops.com:8443' }, proxyHost, sameOriginWrites({}))).code, 403);
+});
+
+test('behind the lab-proxy, end to end: POST /api/mode with the proxy\'s headers reaches the handler, and is refused on a loopback Host', async () => {
+  const { startApp } = await import('./helpers.js');
+  const { request } = await import('node:http');
+  const app = await startApp({ env: { LAB_ALLOWED_HOSTS: 'aggregate-entitlement-lab.local.ping-devops.com' } });
+  try {
+    const post = (host) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({ source: 'mock' });
+      const r = request({ host: '127.0.0.1', port: app.port, path: '/api/mode', method: 'POST', setHost: false, headers: {
+        host, origin: 'https://local.ping-devops.com:8443', 'x-forwarded-host': 'local.ping-devops.com:8443', 'x-forwarded-proto': 'https',
+        'content-type': 'application/json', 'content-length': Buffer.byteLength(body), connection: 'close' } }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+      r.on('error', reject); r.end(body);
+    });
+    assert.equal(await post(`aggregate-entitlement-lab.local.ping-devops.com:${app.port}`), 200);
+    assert.equal(await post(`127.0.0.1:${app.port}`), 403);
+  } finally { await app.close(); }
+});

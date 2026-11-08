@@ -2,7 +2,8 @@
 //  1. Bind loopback only, unless AGG_ENT_BIND is set (an explicit opt-in).
 //  2. Reject any request whose Host header is not a loopback name (DNS-rebinding guard), unless it is listed in
 //     LAB_ALLOWED_HOSTS or AGG_ENT_ALLOWED_HOSTS (family standard, comma separated) or is the AGG_ENT_BIND address.
-//  3. Every state-changing API call (anything but GET/HEAD) must carry an Origin whose host is exactly the Host header.
+//  3. Every state-changing API call (anything but GET/HEAD) must carry an Origin whose host is exactly the Host header, or the
+//     lab-proxy's forwarded origin when Host is one of the listed names (see sameOriginWrites).
 // Loopback helper adapted from hostile-mcp server/src/safety.js (MIT, same author).
 
 export function isLoopbackHost(host) {
@@ -40,12 +41,22 @@ export function hostCheck(env = process.env) {
 }
 
 const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
-export function sameOriginWrites() {
+// Behind the lab-proxy the browser's Origin is the proxy's (https://local.ping-devops.com:8443) while Host is this app's own name.
+// The proxy sets X-Forwarded-Host/-Proto; they are believed only when Host is one of the operator-listed names (loopback does not
+// count), so a request that did not come through the proxy cannot use them.
+export function sameOriginWrites(env = process.env) {
+  const allowed = new Set(allowedHostNames(env));
   return (req, res, next) => {
     if (SAFE.has(req.method)) return next();
     const origin = req.headers.origin;
     let ok = false;
     try { ok = Boolean(origin) && new URL(origin).host.toLowerCase() === String(req.headers.host || '').toLowerCase(); } catch { ok = false; }
+    if (!ok && origin) {
+      const xfh = String(req.headers['x-forwarded-host'] || '').trim().toLowerCase();
+      const xfp = String(req.headers['x-forwarded-proto'] || 'https').trim().toLowerCase();
+      ok = allowed.has(hostName(req.headers.host)) && xfh !== '' && (xfp === 'https' || xfp === 'http') && origin === `${xfp}://${xfh}`
+        && String(req.headers['sec-fetch-site'] || '').toLowerCase() !== 'cross-site';
+    }
     if (!ok) return res.status(403).json({ error: 'cross_origin', message: 'State-changing calls must come from this tool\'s own page (Origin must match Host).' });
     return next();
   };

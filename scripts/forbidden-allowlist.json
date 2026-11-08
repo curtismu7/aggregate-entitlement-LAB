@@ -4,6 +4,10 @@
     {
       "host": "aggregate-entitlement-lab.local.ping-devops.com",
       "reason": "The family lab-proxy name for this app (owner rule 2026-11-03, labs are reached by domain); the default of LAB_ALLOWED_HOSTS in docker-compose.yml and the README"
+    },
+    {
+      "host": "local.ping-devops.com",
+      "reason": "The shared lab-proxy domain (owner rule 2026-11-03): behind it the browser's Origin is this name, which the same-origin write check accepts only together with a listed Host and matching forwarded headers"
     }
   ],
   "uuids": []
