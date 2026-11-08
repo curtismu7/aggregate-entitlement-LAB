@@ -95,7 +95,7 @@ export function createGatewayRouter({ getMode = () => 'mock', env = process.env,
   const READING = 'Which check a refusal matches is our reading of the gateway\'s message; the gateway does not name the check.';
   const realView = () => {
     const cfg = real.load();
-    return { mode: getMode(), available: cfg.ok, ...(cfg.ok ? { apps: cfg.apps, callers: cfg.callers.map(({ id, label }) => ({ id, label })) } : { problem: cfg.problem }) };
+    return { mode: getMode(), available: cfg.ok, ...(cfg.ok ? { version: cfg.version, apps: cfg.apps, callers: cfg.callers.map(({ id, label }) => ({ id, label })) } : { problem: cfg.problem }) };
   };
   // Every Real request: Real mode on, configured, and an app and caller from the settings. -> cfg, or sends the refusal.
   function realGate(req, res, allowed) {

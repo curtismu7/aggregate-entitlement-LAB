@@ -12,7 +12,7 @@ import "./Diagram.css";
 
 // The entitled-listing diagram, drawn from diagrams/gateway.json (diagram-studio/1) by name. Boxes are draggable; Simulate walks
 // one run; Reset diagram puts the boxes back; the speed control sets the pace. The caption says in words what the picture shows.
-// It sits inside the Entitled listing page. Ping release claim (2026-11-02), UNVERIFIED on our tenant.
+// It sits inside the Entitled listing page. Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), per-caller entitlement UNVERIFIED on our tenant.
 export const FLOW = toFlow(loadDiagram("gateway"));
 export const STEPS = FLOW.steps;
 export const VIEWS = { gateway: FLOW }; // the label-placement test walks every view
