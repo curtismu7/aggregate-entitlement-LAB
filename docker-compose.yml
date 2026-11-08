@@ -14,7 +14,7 @@ services:
       - "127.0.0.1:${HOST_PORT:-7802}:7802"
     environment:
       PORT: "7802"
-      SHELF_URL: ${SHELF_URL:-}
+      SHELF_URL: ${SHELF_URL:-http://127.0.0.1:4400}
       LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-aggregate-entitlement-lab.local.ping-devops.com}
       AGG_ENT_GW_URL: ${AGG_ENT_GW_URL:-}
       AGG_ENT_GW_APPS: ${AGG_ENT_GW_APPS:-}

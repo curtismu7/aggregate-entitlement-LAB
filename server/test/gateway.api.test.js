@@ -347,3 +347,18 @@ test('provenance (optional full check): no property of any Mcp or Aggregate defi
   assert.deepEqual(hits, []);
   for (const k of ['modelMcpAggregateMember', 'modelMcpAggregateMembers']) assert.deepEqual(full.definitions[k], EXCERPT.definitions[k]);
 });
+
+test('GET /api/shelf is reachable without a web build and reads SHELF_URL; POST is refused', T, async () => {
+  const prev = process.env.SHELF_URL;
+  process.env.SHELF_URL = 'https://shelf.example:8443/';
+  try {
+    await withApp({}, async (app) => {
+      const r = await app.call('GET', '/api/shelf');
+      assert.equal(r.status, 200);
+      assert.deepEqual(r.json, { shelfUrl: 'https://shelf.example:8443' });
+      assert.notEqual((await app.call('POST', '/api/shelf', {})).status, 200);
+    });
+  } finally {
+    if (prev === undefined) delete process.env.SHELF_URL; else process.env.SHELF_URL = prev;
+  }
+});

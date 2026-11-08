@@ -44,3 +44,7 @@ test('no source or doc still carries the settings or identity of the app this wa
   const hits = ['server/src', 'web/src', 'docs', 'scripts'].flatMap(walk).filter((f) => !f.endsWith('packaging.test.js') && old.test(read(f)));
   assert.deepEqual(hits, []);
 });
+
+test('compose passes a usable SHELF_URL so the header Shelf button shows in Docker', () => {
+  assert.match(read('docker-compose.yml'), /SHELF_URL:\s*\$\{SHELF_URL:-http:\/\/127\.0\.0\.1:4400\}/);
+});
