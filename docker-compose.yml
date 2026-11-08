@@ -8,6 +8,7 @@ name: aggregate-entitlement-lab
 
 services:
   aggregate-entitlement-lab:
+    restart: unless-stopped
     build: .
     ports:
       - "127.0.0.1:${HOST_PORT:-7802}:7802"
