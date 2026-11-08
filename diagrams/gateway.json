@@ -1,0 +1,34 @@
+{
+  "schema": "diagram-studio/1",
+  "id": "gateway",
+  "title": "Entitled listing and aggregate cap",
+  "lede": "Ping release claim (2026-11-02), UNVERIFIED on our tenant. A caller asks the gateway what it may use and gets only its own tools; a hidden tool is refused when called by name; the aggregate's policy cap is checked on the list and again at the member hop.",
+  "groups": {
+    "caller": { "label": "Caller", "color": "dark" },
+    "gateway": { "label": "Gateway", "color": "red" },
+    "member": { "label": "Member server", "color": "grey" },
+    "problem": { "label": "Problem", "color": "amber" }
+  },
+  "nodes": [
+    { "id": "gcaller", "group": "caller", "label": "Caller", "sub": ["Asks tools/list, then calls a tool by name"], "x": 0, "y": 120, "prevents": "A caller learning about tools it may not use." },
+    { "id": "ggw", "group": "gateway", "label": "Gateway: entitlement filter", "sub": ["Removes tools the caller may not use, and refuses them by name"], "x": 215, "y": 120, "prevents": "A tool the caller is not entitled to being offered, or being usable by guessing its name." },
+    { "id": "gagg", "group": "gateway", "label": "Aggregate: policy cap", "sub": ["alias__tool names. The cap limits every member tool"], "x": 430, "y": 120, "prevents": "A member tool being used beyond what the aggregate's policy allows." },
+    { "id": "ghop", "group": "gateway", "label": "Member hop", "sub": ["Cap and member policy checked again before forwarding"], "x": 645, "y": 120, "prevents": "A stale list or a routing slip getting a call past the cap." },
+    { "id": "gmember", "group": "member", "label": "Member MCP server", "sub": ["Used directly, only its own policy applies"], "x": 860, "y": 120, "prevents": "Confusing the aggregate's rules with the member's own: used directly, the member follows only its own policy." },
+    { "id": "gdown", "group": "problem", "label": "Unreachable member", "sub": ["Reported to the caller, not dropped"], "x": 430, "y": 320, "prevents": "An outage looking like 'no tools here'." }
+  ],
+  "edges": [
+    { "source": "gcaller", "target": "ggw", "label": "1" },
+    { "source": "ggw", "target": "gagg", "label": "2" },
+    { "source": "gagg", "target": "ghop", "label": "3" },
+    { "source": "ghop", "target": "gmember", "label": "4" },
+    { "source": "gdown", "target": "gagg", "label": "reported", "dashed": true }
+  ],
+  "steps": [
+    { "title": "Ask what you may use", "what": "The caller asks the gateway what it may use. (Ping release claim, UNVERIFIED on our tenant: simulated in Mock, measured in Real.)", "edges": [0] },
+    { "title": "Only your tools come back", "what": "The reply holds only the tools this caller is entitled to, named alias__tool. The aggregate's policy caps what any member tool may be used for. Nothing says what was left out.", "edges": [1] },
+    { "title": "A down member is reported", "what": "A member that cannot be reached is reported in the reply, not silently dropped.", "edges": [4] },
+    { "title": "A call by name is checked again", "what": "A call by name is checked again, so a hidden tool is refused when it is called, not only left off the list.", "edges": [2] },
+    { "title": "The member hop checks twice", "what": "At the member hop the cap and the member's own policy are checked a second time, then the call is forwarded.", "edges": [3] }
+  ]
+}

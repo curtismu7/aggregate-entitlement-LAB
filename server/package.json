@@ -1,0 +1,13 @@
+{
+  "name": "@aggregate-entitlement/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test --test-concurrency=1 --test-timeout=120000 test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}

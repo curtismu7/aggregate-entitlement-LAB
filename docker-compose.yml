@@ -1,0 +1,33 @@
+# OrbStack:  HOST_PORT=7802 docker compose up --build -d   ->  http://127.0.0.1:7802
+# The server binds 0.0.0.0 INSIDE the container (AGG_ENT_BIND is the opt-in, set in the Dockerfile), but the port is
+# published on loopback only. Do not change the 127.0.0.1 below. HOST_PORT must stay 7802.
+# Mock needs nothing. Real is owner-run: put AGG_ENT_GW_URL, AGG_ENT_GW_APPS and one or more agent keys in the environment of
+# this command (the keys below are the names this file passes through; a key is write-only and is never shown or logged).
+# No host mounts, no docker socket, no host network, no state to keep.
+name: aggregate-entitlement-lab
+
+services:
+  aggregate-entitlement-lab:
+    build: .
+    ports:
+      - "127.0.0.1:${HOST_PORT:-7802}:7802"
+    environment:
+      PORT: "7802"
+      SHELF_URL: ${SHELF_URL:-}
+      LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-aggregate-entitlement-lab.local.ping-devops.com}
+      AGG_ENT_GW_URL: ${AGG_ENT_GW_URL:-}
+      AGG_ENT_GW_APPS: ${AGG_ENT_GW_APPS:-}
+      AGG_ENT_GW_KEY_ANALYST: ${AGG_ENT_GW_KEY_ANALYST:-}
+      AGG_ENT_GW_KEY_OPERATOR: ${AGG_ENT_GW_KEY_OPERATOR:-}
+      AGG_ENT_GW_KEY_GUEST: ${AGG_ENT_GW_KEY_GUEST:-}
+      AGG_ENT_GW_KEY_LAB_AGENT: ${AGG_ENT_GW_KEY_LAB_AGENT:-}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7802/api/health').then(r=>r.json()).then(j=>process.exit(j.schema==='demo-health/1'&&j.state==='ready'?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      start_period: 5s
+      start_interval: 2s
+      timeout: 5s
+      retries: 3

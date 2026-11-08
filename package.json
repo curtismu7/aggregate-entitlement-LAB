@@ -1,0 +1,29 @@
+{
+  "name": "aggregate-entitlement",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Aggregate entitlement lab: see how an MCP aggregate lists only the tools each caller may use, and refuses the rest by name. Mock simulates it; Real measures your own gateway.",
+  "license": "MIT",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "npm start -w server",
+    "test": "npm test -w server && npm test -w web && node --test scripts/check-forbidden-strings.test.mjs",
+    "build": "npm run build -w web",
+    "doctor": "node scripts/doctor.mjs",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "content-pack": "node scripts/build-content-pack.mjs && node scripts/validate-content-pack.mjs",
+    "check:forbidden": "node scripts/check-forbidden-strings.mjs",
+    "docs": "node scripts/build-scan-rules.mjs",
+    "reset": "node scripts/reset.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
+  }
+}

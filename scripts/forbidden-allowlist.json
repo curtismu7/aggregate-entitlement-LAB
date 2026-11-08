@@ -1,0 +1,10 @@
+{
+  "_comment": "Hosts and ids the forbidden-string gate lets through, each with the reason. Add nothing here without a reason.",
+  "hosts": [
+    {
+      "host": "aggregate-entitlement-lab.local.ping-devops.com",
+      "reason": "The family lab-proxy name for this app (owner rule 2026-11-03, labs are reached by domain); the default of LAB_ALLOWED_HOSTS in docker-compose.yml and the README"
+    }
+  ],
+  "uuids": []
+}
