@@ -4,7 +4,7 @@ Tier: Tester
 
 Repo: https://github.com/curtismu7/aggregate-entitlement-LAB
 
-An MCP aggregate puts several MCP servers behind one gateway URL. Without a filter, every agent that connects sees every tool from every server. **Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), per-caller entitlement UNVERIFIED on our tenant:** the gateway lists only the tools each caller is entitled to, refuses a hidden tool when it is called by name, and caps every member tool with one aggregate policy that is checked on the list and again at the member hop. This lab teaches that on one page, and lets you check it.
+An MCP aggregate puts several MCP servers behind one gateway URL. Without a filter, every agent that connects sees every tool from every server. **Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), access by caller measured per aggregate (2026-11-09), per-tool filtering per caller UNVERIFIED on our tenant:** the gateway lists only the tools each caller is entitled to, refuses a hidden tool when it is called by name, and caps every member tool with one aggregate policy that is checked on the list and again at the member hop. This lab teaches that on one page, and lets you check it.
 
 - **Mock** simulates the claim in this process (nothing leaves your computer). Three invented members (crm, bill, wiki) and three callers (Analyst, Operator, Guest); edit the member policy, the ToolFilter and the aggregate cap and watch the lists change.
 - **Real** (header toggle) asks your own gateway's MCP aggregate apps with your agent keys: it compares what each app lists for the same key, and calls a hidden name to see the gateway refuse it. It never calls a tool the key can see.
