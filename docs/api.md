@@ -10,7 +10,7 @@ Every request needs a loopback `Host` (or a name in `LAB_ALLOWED_HOSTS`). Every 
 | `POST /api/reset` | Rule 3 Reset: the mode goes back to the default. `npm run reset` calls it. The edited policy lives in the browser. |
 | `GET /api/rules` | The scan rule table and the limits list. |
 | `GET /api/shelf` | The shelf URL for the header button, or null. |
-| `GET /api/gateway/default` | The default simulated-gateway config, the tag vocabulary and the claim label. Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), per-caller entitlement UNVERIFIED on our tenant. |
+| `GET /api/gateway/default` | The default simulated-gateway config, the tag vocabulary and the claim label. Ping release claim (2026-11-02), listing and cap measured on gateway v1.261106 (2026-11-08), access by caller measured per aggregate (2026-11-09), per-tool filtering per caller UNVERIFIED on our tenant. |
 | `POST /api/gateway/list` | `{config?, caller, view?: 'aggregate'\|'direct', member?}` returns the tools that caller sees and the member status. Hidden tools are absent and not counted. |
 | `POST /api/gateway/call` | `{config?, caller, view?, member?, tool, arguments?}`. 200 for an allowed tool, 403 `tool_not_available` with the same words for a hidden or unknown one, plus a labelled demo trace. |
 | `POST /api/gateway/audit` | Same body as list. Names every tool and the layer that stopped it. Demo only: a caller never sees this. |
