@@ -23,6 +23,8 @@ services:
       AGG_ENT_GW_KEY_OPERATOR: ${AGG_ENT_GW_KEY_OPERATOR:-}
       AGG_ENT_GW_KEY_GUEST: ${AGG_ENT_GW_KEY_GUEST:-}
       AGG_ENT_GW_KEY_LAB_AGENT: ${AGG_ENT_GW_KEY_LAB_AGENT:-}
+      AGG_ENT_GW_KEY_AGG_GUEST: ${AGG_ENT_GW_KEY_AGG_GUEST:-}
+      AGG_ENT_GW_KEY_AGG_DELEGATE: ${AGG_ENT_GW_KEY_AGG_DELEGATE:-}
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
