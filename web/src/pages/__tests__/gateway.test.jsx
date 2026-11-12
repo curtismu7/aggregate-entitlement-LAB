@@ -20,7 +20,7 @@ async function openGateway(user) {
   render(<App />);
   await user.click(await screen.findByRole("link", { name: "Entitled listing" }));
   await waitFor(() => expect(screen.getByTestId("listing-count")).toBeInTheDocument());
-  await waitFor(() => expect(screen.getByRole("button", { name: "Reset" })).toBeEnabled());
+  await waitFor(() => expect(within(screen.getByRole("main")).getByRole("button", { name: "Reset" })).toBeEnabled());
 }
 const count = () => Number(within(screen.getByTestId("listing-count")).getByText(/^\d+$/).textContent);
 const listed = () => within(screen.getByRole("list", { name: "Listed tools" })).queryAllByRole("listitem").map((li) => li.querySelector("code").textContent);
@@ -139,7 +139,7 @@ describe("Entitled listing page (real engine)", () => {
     expect(listed()).toContain("crm__export_all");
     await user.selectOptions(screen.getByLabelText("Caller"), "guest");
     await waitFor(() => expect(count()).toBe(1));
-    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Reset" }));
     await waitFor(() => expect(screen.getByLabelText("Caller")).toHaveValue("operator"));
     await waitFor(() => expect(count()).toBe(6));
     expect(screen.getByLabelText("cap lets Operator use crm__export_all")).not.toBeChecked();
@@ -230,7 +230,7 @@ describe("Diagram: entitled-listing run, on the Entitled listing page", () => {
     await user.click(screen.getByRole("button", { name: "Reset diagram" }));
     expect(screen.getByTestId("caption")).toHaveTextContent("Press Simulate");
     expect(screen.getByLabelText("Caller")).toHaveValue("guest");
-    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await user.click(within(screen.getByRole("main")).getByRole("button", { name: "Reset" }));
     await waitFor(() => expect(screen.getByTestId("gw-live")).toHaveTextContent(/for Operator through the aggregate: 6 tool\(s\) listed and 2 hidden/));
     expect(screen.getByLabelText("cap lets Operator use crm__export_all")).not.toBeChecked();
     expect(screen.getByLabelText("Caller")).toHaveValue("operator");

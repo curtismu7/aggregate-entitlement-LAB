@@ -13,6 +13,8 @@ const REAL_INFO = { source: "real", realAvailable: true, realReason: null };
 const MOCK_INFO = { source: "mock", realAvailable: true, realReason: null };
 const NOT_SET = "Real is not configured: no gateway URL. Set AGG_ENT_GW_URL, AGG_ENT_GW_APPS and at least one AGG_ENT_GW_KEY_<NAME> in ~/Development/.env.";
 
+const modeSelect = () => screen.getByTestId("mode-select");
+
 async function mount({ info, modeReply } = {}) {
   const overrides = {};
   if (info) overrides["GET /api/info"] = () => info;
@@ -20,7 +22,7 @@ async function mount({ info, modeReply } = {}) {
   mockServer(overrides);
   routeGatewayTo(gatewayOrigin());
   render(<App />);
-  await screen.findByTestId("mode-toggle");
+  await screen.findByTestId("mode-select");
 }
 
 describe("rule 19: the Mock/Real toggle", () => {
@@ -28,26 +30,25 @@ describe("rule 19: the Mock/Real toggle", () => {
     await mount({ info: MOCK_INFO });
     for (const name of ["Stories", "Limits", "Entitled listing"]) {
       fireEvent.click(screen.getByRole("link", { name }));
-      expect(screen.getByTestId("mode-toggle")).toBeInTheDocument();
-      expect(screen.getByTestId("mode-mock")).toHaveAttribute("aria-pressed", "true");
+      expect(modeSelect()).toBeInTheDocument();
+      expect(modeSelect()).toHaveValue("mock");
     }
-    expect(screen.getByTestId("mode-real")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("shows Real pressed when the server defaults to Real (it is configured)", async () => {
     await mount({ info: REAL_INFO });
-    await waitFor(() => expect(screen.getByTestId("mode-real")).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(modeSelect()).toHaveValue("real"));
     expect(screen.getByTestId("release-banner")).toHaveTextContent(/Mode: Real/);
   });
 
   it("switches to Real through POST /api/mode and back to Mock (both directions)", async () => {
     await mount({ info: MOCK_INFO, modeReply: REAL_INFO });
-    fireEvent.click(screen.getByTestId("mode-real"));
+    fireEvent.change(modeSelect(), { target: { value: "real" } });
     await waitFor(() => expect(sent("POST /api/mode").length).toBe(1));
     expect(sent("POST /api/mode")[0].body).toEqual({ source: "real" });
-    await waitFor(() => expect(screen.getByTestId("mode-mock")).toHaveAttribute("aria-pressed", "false"));
+    await waitFor(() => expect(modeSelect()).toHaveValue("real"));
     expect(screen.getByTestId("release-banner")).toHaveTextContent(/Mode: Real/);
-    fireEvent.click(screen.getByTestId("mode-mock"));
+    fireEvent.change(modeSelect(), { target: { value: "mock" } });
     await waitFor(() => expect(sent("POST /api/mode").length).toBe(2));
     expect(sent("POST /api/mode")[1].body).toEqual({ source: "mock" });
   });
@@ -56,20 +57,24 @@ describe("rule 19: the Mock/Real toggle", () => {
     await mount({ info: MOCK_INFO, modeReply: REAL_INFO });
     await screen.findByTestId("gwl-mode");
     expect(screen.getByTestId("gwl-mode")).toHaveTextContent(/You are in Mock/);
-    fireEvent.click(screen.getByTestId("mode-real"));
+    fireEvent.change(modeSelect(), { target: { value: "real" } });
     await waitFor(() => expect(screen.getByTestId("gwl-mode")).toHaveTextContent(/You are in Real/));
   });
 
   it("a refused switch (409) shows the server's how-to and changes nothing", async () => {
     await mount({ info: { source: "mock", realAvailable: false, realReason: NOT_SET }, modeReply: { __status: 409, body: { error: "real_not_available", message: NOT_SET, source: "mock" } } });
-    fireEvent.click(screen.getByTestId("mode-real"));
+    fireEvent.change(modeSelect(), { target: { value: "real" } });
     await waitFor(() => expect(screen.getByTestId("mode-note")).toHaveTextContent(/AGG_ENT_GW_URL/));
-    expect(screen.getByTestId("mode-mock")).toHaveAttribute("aria-pressed", "true");
+    expect(modeSelect()).toHaveValue("mock");
   });
 
-  it("when Real is not configured the Real button is aria-disabled with the how-to as its tooltip", async () => {
+  it("when Real is not configured the Real option is disabled with the how-to as its tooltip", async () => {
     await mount({ info: { source: "mock", realAvailable: false, realReason: NOT_SET } });
-    await waitFor(() => expect(screen.getByTestId("mode-real")).toHaveAttribute("aria-disabled", "true"));
-    expect(screen.getByTestId("mode-real")).toHaveAttribute("title", NOT_SET);
+    const option = await waitFor(() => {
+      const o = modeSelect().querySelector('option[value="real"]');
+      expect(o).toBeDisabled();
+      return o;
+    });
+    expect(option).toHaveAccessibleDescription(NOT_SET);
   });
 });

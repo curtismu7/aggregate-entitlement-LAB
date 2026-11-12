@@ -42,7 +42,9 @@ export function createApp({ env = process.env, health = createHealth({ env }) } 
   const modeView = () => {
     const cfg = real();
     if (mode === 'real' && !cfg.ok) mode = 'mock'; // a setting removed while running
-    return { source: mode, realAvailable: cfg.ok, realReason: cfg.ok ? null : cfg.problem };
+    let version = null;
+    try { version = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version || null; } catch { /* no version */ }
+    return { source: mode, realAvailable: cfg.ok, realReason: cfg.ok ? null : cfg.problem, version };
   };
 
   const api = express.Router();
