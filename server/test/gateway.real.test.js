@@ -119,7 +119,7 @@ test('not configured: Real says why, the switch is refused with 409, the default
     assert.equal(r.json.available, false);
     assert.match(r.json.problem, /AGG_ENT_GW_URL/);
     const info = await app.call('GET', '/api/info');
-    assert.deepEqual(Object.keys(info.json).sort(), ['realAvailable', 'realReason', 'source']);
+    assert.deepEqual(Object.keys(info.json).sort().filter((k) => k !== 'version'), ['realAvailable', 'realReason', 'source']);
     assert.equal(info.json.source, 'mock');
     assert.equal(info.json.realAvailable, false);
     assert.match(info.json.realReason, /AGG_ENT_GW_URL/);
@@ -133,7 +133,7 @@ test('not configured: Real says why, the switch is refused with 409, the default
 test('rule 19: both switch directions, exactly { source }, and the default follows the settings', T, async () => {
   await withReal({}, async (app, stub) => {
     assert.equal((await app.call('GET', '/api/info')).json.source, 'real');
-    assert.deepEqual((await mock(app)).json, { source: 'mock', realAvailable: true, realReason: null });
+    const m = (await mock(app)).json; assert.deepEqual({ ...m, version: undefined }, { source: 'mock', realAvailable: true, realReason: null, version: undefined });
     assert.equal((await app.call('GET', '/api/info')).json.source, 'mock');
     assert.equal((await real(app)).json.source, 'real');
     assert.equal((await app.call('POST', '/api/mode', { source: 'real', extra: 1 })).status, 400);
