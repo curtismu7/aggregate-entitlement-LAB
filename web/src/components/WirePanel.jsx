@@ -1,15 +1,18 @@
 import React from "react";
 import { CLAIM_NOTES, SPEC_URL, TERMS } from "../lib/wire.js";
+import Json from "./JsonPane.jsx";
 
 // "On the wire": request, response, the token decoded claim by claim, and what the step protects against.
-// All values are examples. `wire` comes from lib/wire.js.
+// All values are examples. `wire` comes from lib/wire.js. A message goes to Json whole (request line, headers, blank line, JSON body):
+// the headers stay text and the body gets its own Form | JSON pane. The token's raw string is shown by Json in its three colours.
+const HOT = ["method", "tools", "name", "message"]; // what this lab's payloads are about: the call, and which tools are listed or refused
 const fmt = (v) => (typeof v === "object" ? JSON.stringify(v) : String(v));
 
 function Message({ title, m }) {
   return (
     <div className="wire__msg">
       <h4>{title}</h4>
-      {m ? <pre className="wire__pre" data-testid={`wire-${title.toLowerCase()}`}>{[m.line, ...m.headers, ...(m.body ? ["", m.body] : [])].join("\n")}</pre>
+      {m ? <Json value={[m.line, ...m.headers, ...(m.body ? ["", m.body] : [])].join("\n")} label={title} testId={`wire-${title.toLowerCase()}`} hot={HOT} />
         : <p className="muted small">None on this step.</p>}
     </div>
   );
@@ -23,7 +26,7 @@ function Token({ t }) {
   return (
     <div className="wire__token">
       <h4>Token: {t.label}</h4>
-      <p className="wire__jwt" data-testid="wire-jwt"><span className="jwt-h">{t.raw[0]}</span>.<span className="jwt-p">{t.raw[1]}</span>.<span className="jwt-s">{t.raw[2]}</span></p>
+      <Json value={t.raw.join(".")} label="Token" testId="wire-jwt" />
       <table className="rules">
         <thead><tr><th scope="col">Claim</th><th scope="col">Value</th><th scope="col">What this means</th></tr></thead>
         <tbody>{rows.map(([label, v, k]) => (
