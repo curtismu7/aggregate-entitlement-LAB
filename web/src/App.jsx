@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import ShelfLink from "./components/ShelfLink.jsx";
+import VerifyMark from "./components/VerifyMark.jsx";
 import { get, post } from "./lib/api.js";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
 import Stories from "./pages/Stories.jsx";
@@ -60,6 +61,7 @@ function Shell() {
           onReset={gw.reset}
         >
           <ShelfLink />
+          <VerifyMark id="aggregate-entitlement-lab" />
         </TopMenu>
         <nav aria-label="Pages">
           {PAGES.map(([id, label]) => (
