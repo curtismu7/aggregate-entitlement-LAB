@@ -80,6 +80,7 @@ export function PresentBar() {
     <div className="present-bar" role="toolbar" aria-label="Presenter controls">
       {steps.length > 0 && (
         <>
+          {/* ui-pattern: allow P9 the presenter toolbar (Previous, Next, Fullscreen, Exit; shown only in presenter mode) and the Stories step picker (story__step buttons in StoryPanel.jsx) are navigation, not page actions; Stories and Limits have no page action to make primary */}
           <button type="button" className="btn" onClick={() => move(-1)} disabled={i <= 0}>Previous</button>
           <span className="present-bar__count" data-testid="present-count">Step {i + 1} of {steps.length}</span>
           <button type="button" className="btn" onClick={() => move(1)} disabled={i >= steps.length - 1}>Next</button>
