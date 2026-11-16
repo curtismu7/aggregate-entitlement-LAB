@@ -45,7 +45,9 @@ test('list: per caller, real counts, and nothing in the body says what was hidde
       assert.equal(r.status, 200);
       counts[caller] = r.json.tools.length;
       assert.equal(r.json.claim.banner, BANNER);
-      assert.doesNotMatch(JSON.stringify({ ...r.json, tools: undefined }), /export_all|edit_page|refund_payment|hidden|denied/i, 'members and claim carry no tool names and no hidden count');
+      assert.doesNotMatch(JSON.stringify({ ...r.json, tools: undefined, trace: undefined }), /export_all|edit_page|refund_payment|hidden|denied/i, 'members and claim carry no tool names and no hidden count');
+      // the trace is demo only (its decisions name what a check removed); what the caller is sent in it is the same reply, with no hidden name
+      assert.doesNotMatch(JSON.stringify({ ...r.json.trace.response.body, tools: undefined }), /export_all|edit_page|refund_payment|hidden|denied/i, 'the reply shown in the trace names no hidden tool');
     }
     assert.deepEqual(counts, { analyst: 4, operator: 6, guest: 1 });
     const direct = await post(app, 'list', { caller: 'operator', view: 'direct', member: 'crm' });
@@ -60,8 +62,9 @@ test('call: a hidden tool is refused by name with 403 and the same words as an u
     const ok = await post(app, 'call', { caller: 'operator', tool: 'crm__update_customer', arguments: { id: 'c-1' } });
     assert.equal(hidden.status, 403); assert.equal(unknown.status, 403); assert.equal(ok.status, 200);
     assert.equal(hidden.json.message, unknown.json.message);
-    const body = ({ demoTrace, ...rest }) => rest; // the demo trace is labelled demo only and differs by design
+    const body = ({ demoTrace, trace, ...rest }) => rest; // the demo trace and the gateway trace's decisions are labelled demo only and differ by design
     assert.deepEqual(body(hidden.json), body(unknown.json), 'the whole body, not only the message');
+    assert.deepEqual(hidden.json.trace.response.body, unknown.json.trace.response.body, 'the reply shown in the trace is the same for a hidden and an unknown name');
     assert.equal(hidden.json.error, 'tool_not_available');
     assert.match(hidden.json.demoTrace.note, /Demo only/);
     assert.equal(hidden.json.demoTrace.steps[0].layer, 'aggregate-cap');
@@ -77,11 +80,13 @@ test('direct view: an unknown tool gets the same refusal body as a hidden one, a
     const unknown = await direct('analyst', 'nothing_here');
     assert.equal((await direct('operator', 'update_customer')).status, 200, 'control: the operator may call it');
     assert.equal(hidden.status, 403); assert.equal(unknown.status, 403);
-    const body = ({ demoTrace, ...rest }) => rest;
+    const body = ({ demoTrace, trace, ...rest }) => rest;
     assert.deepEqual(body(hidden.json), body(unknown.json));
+    assert.deepEqual(hidden.json.trace.response.body, unknown.json.trace.response.body, 'the reply shown in the trace is the same too');
     assert.equal(unknown.json.error, 'tool_not_available');
     assert.match(unknown.json.message, /not available to this caller/);
-    assert.ok(!unknown.text.includes('nothing_here') && !hidden.text.includes('update_customer'), 'the refusal repeats no tool name');
+    // the gateway trace is demo only and shows the request the caller sent, so the name appears there; the refusal itself repeats none
+    assert.ok(!JSON.stringify(body(unknown.json)).includes('nothing_here') && !JSON.stringify(body(hidden.json)).includes('update_customer') && !JSON.stringify(unknown.json.trace.response.body).includes('nothing_here'), 'the refusal repeats no tool name');
     // the demo trace is the only place the two differ
     assert.equal(hidden.json.demoTrace.steps[0].layer, 'member-policy');
     assert.equal(unknown.json.demoTrace.steps[0].layer, 'unknown');

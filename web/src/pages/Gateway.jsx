@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ScanResult from "../components/ScanResult.jsx";
+import GatewayTrace from "../gateway-trace/GatewayTrace.jsx";
 import { Glossary, Intro, RealTryThis, SixChecks, TryThis } from "../components/GatewayLearn.jsx";
 import Diagram from "./Diagram.jsx";
 import GatewayReal, { REAL_LAYERS } from "./GatewayReal.jsx";
@@ -113,6 +114,11 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
   }
 
   const c = state.call;
+  // "What Privilege did" (rule 25): the listing the caller sees, then the call, each exactly as the simulated gateway answered.
+  const exchanges = [
+    listing?.trace && { step: 1, title: "Gateway check: tools/list", status: listing.trace.response.status, trace: listing.trace },
+    c?.data?.trace && { step: 2, title: `Gateway check: tools/call ${c.name}`, status: c.data.trace.response.status, trace: c.data.trace },
+  ].filter(Boolean);
   return (
     <>
       <h2>Entitled listing: each caller sees only its own tools</h2>
@@ -179,6 +185,8 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
           </div>
         )}
       </div>
+
+      <GatewayTrace exchanges={exchanges} source="mock" basisNote={`Simulated: this lab's in-process gateway ran the checks in this order, so each decision is what it computed (nothing here was measured on a gateway). It models ${BANNER}. Real mode shows the actual gateway.`} />
 
       <h3>Scan this listing</h3>
       <div className="card">

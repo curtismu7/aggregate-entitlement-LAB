@@ -17,6 +17,7 @@ An MCP aggregate puts several MCP servers behind one gateway URL. Without a filt
 3. **Try this**: six one-click steps (Mock) or four steps for your gateway (Real).
 4. The controls, the listing, **Call a tool by name**, **Scan this listing** (the metadata scanner, as that caller sees the list), the audit view, the policy editor, where each name comes from.
 5. **Words on this page** (glossary) and **See it drawn**: a ReactFlow diagram loaded from `diagrams/gateway.json` (movable boxes, Simulate, Reset diagram, speed).
+6. **What Privilege did**: under the call result (Mock) or the Real controls, each call to the gateway: the exact request, the exact response and the decisions in between. In Mock the lab's own simulated gateway computed the checks (marked as such); in Real the gateway reports no per-check detail, so decisions are only *inferred* from the status or *observed* in the response, and the agent key is never shown. The panel is the shared `GatewayTrace`, vendored byte for byte and pinned by a hash.
 
 Also: Stories (one story, with presenter mode, the Present button or the p key) and Limits (what a scan cannot catch). A banner on every page and in presenter mode says what is simulated.
 

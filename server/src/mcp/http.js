@@ -42,7 +42,15 @@ async function readReply(res, id) {
   try { return JSON.parse(text); } catch { throw rpcError('reply is not JSON', 'mcp_bad_reply'); }
 }
 
-export function createHttpClient({ url, getAuth, timeoutMs = 15_000, clientInfo = { name: 'aggregate-entitlement', version: '0.1.0' } }) {
+// Response headers worth showing in a trace (an allowlist: a cookie or anything else never reaches it).
+const SHOWN_RESPONSE_HEADERS = ['content-type', 'mcp-session-id', 'www-authenticate', 'retry-after', 'x-request-id', 'request-id', 'x-correlation-id'];
+const shownHeaders = (h) => Object.fromEntries(SHOWN_RESPONSE_HEADERS.filter((n) => h.get(n) !== null).map((n) => [n, h.get(n)]));
+const asJson = (text) => { try { return JSON.parse(text); } catch { return text || null; } };
+
+// `capture`: an optional array. When given, every exchange this client makes is pushed to it as it happens: the request
+// as sent (the credential header is left out; the caller shows its own placeholder), the reply as received (the whole
+// JSON-RPC message, not cut to the 300 characters an error message keeps), or the error if there was no reply.
+export function createHttpClient({ url, getAuth, timeoutMs = 15_000, clientInfo = { name: 'aggregate-entitlement', version: '0.1.0' }, capture = null }) {
   const state = { sessionId: null, protocolVersion: null, initialized: false, pending: null, info: null };
   let msgId = 0;
 
@@ -52,24 +60,36 @@ export function createHttpClient({ url, getAuth, timeoutMs = 15_000, clientInfo 
     if (auth) headers[auth[0]] = auth[1];
     if (state.sessionId) headers['Mcp-Session-Id'] = state.sessionId;
     if (method !== 'initialize') headers['MCP-Protocol-Version'] = state.protocolVersion || PROTOCOL_VERSION;
+    const message = id === undefined ? { jsonrpc: '2.0', method, params } : { jsonrpc: '2.0', id, method, params };
+    const rec = capture && {
+      rpcMethod: method, http: 'POST', url, at: new Date().toISOString(),
+      request: { headers: Object.fromEntries(Object.entries(headers).filter(([k]) => k !== auth?.[0]).map(([k, v]) => [k.toLowerCase(), v])), body: message },
+      response: null, error: null, sse: false,
+    };
+    if (rec) capture.push(rec);
     let res;
     try {
-      res = await fetch(url, {
-        method: 'POST', headers, redirect: 'manual', signal: AbortSignal.timeout(timeoutMs),
-        body: JSON.stringify(id === undefined ? { jsonrpc: '2.0', method, params } : { jsonrpc: '2.0', id, method, params }),
-      });
+      res = await fetch(url, { method: 'POST', headers, redirect: 'manual', signal: AbortSignal.timeout(timeoutMs), body: JSON.stringify(message) });
     } catch (err) {
+      if (rec) rec.error = err?.name === 'TimeoutError' || err?.name === 'AbortError' ? `no answer within ${timeoutMs}ms` : `could not connect (${err?.cause?.code || err?.code || 'network error'})`;
       if (err?.name === 'TimeoutError' || err?.name === 'AbortError') throw rpcError(`MCP HTTP request timed out after ${timeoutMs}ms`, 'mcp_timeout');
       throw rpcError(`MCP HTTP request unreachable (${err?.cause?.code || err?.code || 'network error'})`, 'mcp_unreachable');
     }
+    if (rec) rec.response = { status: res.status, headers: shownHeaders(res.headers), body: null };
     if (res.status >= 300 && res.status < 400) { res.body?.cancel().catch(() => {}); throw rpcError(`MCP HTTP ${res.status}: redirects are not followed`, 'mcp_http_error', { httpStatus: res.status }); }
     if (!res.ok) {
-      const body = (await res.text().catch(() => '')).slice(0, 300);
+      const text = await res.text().catch(() => '');
+      if (rec) rec.response.body = asJson(text);
+      const body = text.slice(0, 300);
       throw rpcError(`MCP HTTP ${res.status}${body ? `: ${body}` : ''}`, 'mcp_http_error', { httpStatus: res.status });
     }
     const sid = res.headers.get('mcp-session-id');
     if (sid) state.sessionId = sid;
-    const json = id === undefined ? (res.body?.cancel().catch(() => {}), undefined) : await readReply(res, id);
+    let json;
+    try {
+      json = id === undefined ? (res.body?.cancel().catch(() => {}), undefined) : await readReply(res, id);
+    } catch (err) { if (rec) rec.error = err.message; throw err; }
+    if (rec) { rec.response.body = json ?? null; rec.sse = /text\/event-stream/i.test(res.headers.get('content-type') || ''); }
     if (json?.error) throw rpcError(json.error.message || 'MCP JSON-RPC error', 'mcp_rpc_error', { mcpCode: json.error.code });
     return json?.result;
   }
@@ -108,7 +128,10 @@ export function createHttpClient({ url, getAuth, timeoutMs = 15_000, clientInfo 
       const headers = { 'Mcp-Session-Id': state.sessionId };
       const auth = getAuth?.();
       if (auth) headers[auth[0]] = auth[1];
-      await fetch(url, { method: 'DELETE', headers, redirect: 'manual', signal: AbortSignal.timeout(3000) }).catch(() => {});
+      const sent = { ...headers };
+      const res = await fetch(url, { method: 'DELETE', headers, redirect: 'manual', signal: AbortSignal.timeout(3000) }).catch(() => null);
+      if (capture) capture.push({ rpcMethod: 'close session', http: 'DELETE', url, at: new Date().toISOString(), request: { headers: Object.fromEntries(Object.entries(sent).filter(([k]) => k !== auth?.[0]).map(([k, v]) => [k.toLowerCase(), v])), body: null }, response: res ? { status: res.status, headers: shownHeaders(res.headers), body: null } : null, error: res ? null : 'no answer', sse: false });
+      res?.body?.cancel().catch(() => {});
       state.sessionId = null; state.initialized = false;
     },
   };
