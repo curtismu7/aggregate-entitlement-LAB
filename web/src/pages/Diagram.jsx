@@ -126,7 +126,7 @@ export default function Diagram({ theme = "system", gw }) {
     <>
       <div className="card controls">
         <label>Speed<select value={speed} onChange={(e) => setSpeed(e.target.value)}>{SPEEDS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
-        <button type="button" className="btn primary" onClick={simulate} disabled={running}>Simulate</button>
+        <button type="button" className="btn" onClick={simulate} disabled={running}>Simulate</button>
         <button type="button" className="btn" onClick={reset}>Reset diagram</button>
       </div>
       <div className="flow-wrap" role="group" aria-label={FLOW.label} data-layout={narrow ? "narrow" : "wide"} style={height ? { height } : undefined}>

@@ -49,8 +49,17 @@ function Shell() {
   return (
     <>
       <a className="skip" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>Skip to content</a>
-      <header className="top">
-        <h1>Aggregate entitlement lab</h1>
+      <header className="shell-bar">
+        <span className="shell-brand">
+          <span className="shell-logo" aria-hidden="true">AE</span>
+          <h1>Aggregate entitlement lab</h1>
+          <span className={`shell-badge${source === "real" ? " shell-badge--real" : ""}`} data-testid="mode-badge">{source === "real" ? "Real" : "Mock"}</span>
+        </span>
+        <nav className="shell-nav" aria-label="Pages">
+          {PAGES.map(([id, label]) => (
+            <a key={id} href={`#${id}`} aria-current={page === id ? "page" : undefined} onClick={(e) => { e.preventDefault(); setPage(id); }}>{label}</a>
+          ))}
+        </nav>
         <TopMenu
           mode={{ value: source === "real" ? "real" : "mock", onChange: chooseMode, realAvailable: modeInfo?.realAvailable !== false, realHint: modeInfo?.realReason || undefined }}
           theme={{ value: theme === "system" ? "auto" : theme, onChange: (t) => setTheme(t === "auto" ? "system" : t) }}
@@ -63,16 +72,11 @@ function Shell() {
           <ShelfLink />
           <VerifyMark id="aggregate-entitlement-lab" />
         </TopMenu>
-        <nav aria-label="Pages">
-          {PAGES.map(([id, label]) => (
-            <a key={id} href={`#${id}`} aria-current={page === id ? "page" : undefined} onClick={(e) => { e.preventDefault(); setPage(id); }}>{label}</a>
-          ))}
-        </nav>
       </header>
-      <PresentBar />
-      <ReleaseBanner source={source} />
-      {modeNote && <p className="notice" role="status" data-testid="mode-note">{modeNote}</p>}
       <main className="page" id="main" tabIndex={-1}>
+        <ReleaseBanner source={source} />
+        {modeNote && <p className="notice" role="status" data-testid="mode-note">{modeNote}</p>}
+        <PresentBar />
         {page === "gateway" && <Gateway gw={gw} modeSource={source} theme={theme} />}
         {page === "stories" && <Stories />}
         {page === "limits" && <Limits />}

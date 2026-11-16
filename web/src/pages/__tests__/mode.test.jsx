@@ -78,3 +78,23 @@ describe("rule 19: the Mock/Real toggle", () => {
     expect(option).toHaveAccessibleDescription(NOT_SET);
   });
 });
+
+describe("shell bar (STANDALONE-UI-PATTERNS.md sections 1 and 2)", () => {
+  it("brand, mode badge, the current page pill and the TopMenu sit in header.shell-bar; <main> follows with the banner first", async () => {
+    await mount({ info: MOCK_INFO, modeReply: REAL_INFO });
+    const bar = document.querySelector("header.shell-bar");
+    expect(bar).not.toBeNull();
+    expect(bar.querySelector(".shell-brand h1")).toHaveTextContent("Aggregate entitlement lab");
+    expect(screen.getByTestId("mode-badge")).toHaveTextContent("Mock");
+    expect(bar.querySelector('.shell-nav a[aria-current="page"]')).toHaveTextContent("Entitled listing");
+    expect(bar.querySelector("[data-testid=top-menu]")).toHaveClass("shell-right");
+    const main = screen.getByRole("main");
+    expect(bar.nextElementSibling).toBe(main);
+    expect(main.firstElementChild).toBe(screen.getByTestId("release-banner"));
+    fireEvent.click(screen.getByRole("link", { name: "Limits" }));
+    expect(bar.querySelector('.shell-nav a[aria-current="page"]')).toHaveTextContent("Limits");
+    expect(main.firstElementChild).toBe(screen.getByTestId("release-banner"));
+    fireEvent.change(modeSelect(), { target: { value: "real" } });
+    await waitFor(() => expect(screen.getByTestId("mode-badge")).toHaveTextContent("Real"));
+  });
+});
