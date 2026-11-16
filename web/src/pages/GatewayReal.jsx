@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Untrusted } from "../lib/Untrusted.jsx";
 import { get, post } from "../lib/api.js";
+import GatewayTrace from "../gateway-trace/GatewayTrace.jsx";
 
 // Real mode of the Entitled listing page: the same questions asked of a real gateway's MCP aggregate apps, with the
 // operator's agent keys (server/src/gateway/real.js; keys never reach the browser). Only a name that is NOT in the
@@ -64,9 +65,19 @@ export default function GatewayReal({ onLayer }) {
     setBusy(true);
     const r = await post("/api/gateway/real/call", { app, caller, tool: tool.trim(), confirm: true });
     setBusy(false);
-    const res = r.ok ? r.data : { ok: false, blocked: true, message: r.data?.message || `The request failed (${r.status}).` };
+    const res = r.ok ? r.data : { ok: false, blocked: true, message: r.data?.message || `The request failed (${r.status}).`, listTrace: r.data?.listTrace };
     setResult({ ...res, name: tool.trim(), app });
     onLayer(r.ok && !r.data.ok ? r.data.refusal.layer : null);
+  }
+
+  // "What Privilege did" (rule 25): every call made to the gateway so far, exactly as sent and answered. An app's listing, then the
+  // listing that came before a hidden-name call, then the call.
+  const exchanges = [];
+  const add = (title, trace) => { if (trace) exchanges.push({ step: exchanges.length + 1, title, status: trace.response?.status ?? null, trace }); };
+  for (const a of info.apps) add(`Gateway check: tools/list on ${a}`, lists[a]?.trace);
+  if (result) {
+    add(`Gateway check: tools/list on ${result.app} (before the call)`, result.listTrace);
+    add(`Gateway check: tools/call ${result.name} on ${result.app}`, result.trace);
   }
 
   return (
@@ -138,6 +149,7 @@ export default function GatewayReal({ onLayer }) {
           </div>
         )}
       </div>
+      <GatewayTrace exchanges={exchanges} source="real" />
     </>
   );
 }

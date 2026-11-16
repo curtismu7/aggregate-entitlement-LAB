@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import { createHttpClient } from '../mcp/http.js';
 import { clip, scrub, scrubJson } from '../redact.js';
+import { realTraceOf } from './aggregateTrace.js';
 
 const APP = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const NAME = /^[A-Z0-9][A-Z0-9_]{0,31}$/;
@@ -73,31 +74,39 @@ export function createReal({ env = process.env, client = createHttpClient } = {}
   const secrets = (cfg) => (cfg.ok ? cfg.callers.map((c) => c.key) : []);
   const refusal = (cfg, err) => ({ status: err?.httpStatus ?? null, message: clip(scrub(err?.message || 'the gateway refused', secrets(cfg))), layer: readRefusal(err) });
 
-  function open(cfg, app, caller) {
+  function open(cfg, app, caller, capture) {
     const c = cfg.callers.find((x) => x.id === caller);
-    return client({ url: `${cfg.origin}/${app}/mcp`, getAuth: () => ['Authorization', `Bearer ${c.key}`], clientInfo: { name: 'aggregate-entitlement-lab', version: '0.1.0' } });
+    return client({ url: `${cfg.origin}/${app}/mcp`, getAuth: () => ['Authorization', `Bearer ${c.key}`], clientInfo: { name: 'aggregate-entitlement-lab', version: '0.1.0' }, capture });
   }
+  // The trace is built after the session is closed, so the close is part of what it reports. It holds the key's length, never the key.
+  const traced = (cfg, caller, rpcMethod, capture, result) => ({ ...result, trace: realTraceOf(capture, { rpcMethod, key: cfg.callers.find((x) => x.id === caller).key, secrets: secrets(cfg), result }) });
   async function list(cfg, app, caller) {
-    const mcp = open(cfg, app, caller);
+    const capture = [];
+    const mcp = open(cfg, app, caller, capture);
     const started = Date.now();
+    let out;
     try {
       const r = await mcp.rpc('tools/list', {});
       const tools = (Array.isArray(r?.tools) ? r.tools : []).slice(0, MAX_TOOLS).map((t) => ({ name: clip(t?.name, 160), description: clip(t?.description, 300) }));
-      return { ok: true, tools: scrubJson(tools, secrets(cfg)), ms: Date.now() - started };
+      out = { ok: true, tools: scrubJson(tools, secrets(cfg)), ms: Date.now() - started };
     } catch (err) {
-      return { ok: false, refusal: refusal(cfg, err), ms: Date.now() - started };
+      out = { ok: false, refusal: refusal(cfg, err), ms: Date.now() - started };
     } finally { await mcp.close().catch(() => {}); }
+    return traced(cfg, caller, 'tools/list', capture, out);
   }
   async function callHidden(cfg, app, caller, tool) {
-    const mcp = open(cfg, app, caller);
+    const capture = [];
+    const mcp = open(cfg, app, caller, capture);
     const started = Date.now();
+    let out;
     try {
       const r = await mcp.rpc('tools/call', { name: tool, arguments: {} });
       const text = Array.isArray(r?.content) ? r.content.map((x) => (x?.type === 'text' ? x.text : `[${x?.type}]`)).join('\n') : '';
-      return { ok: true, isError: r?.isError === true, text: clip(scrub(text, secrets(cfg)), 600), ms: Date.now() - started };
+      out = { ok: true, isError: r?.isError === true, text: clip(scrub(text, secrets(cfg)), 600), ms: Date.now() - started };
     } catch (err) {
-      return { ok: false, refusal: refusal(cfg, err), ms: Date.now() - started };
+      out = { ok: false, refusal: refusal(cfg, err), ms: Date.now() - started };
     } finally { await mcp.close().catch(() => {}); }
+    return traced(cfg, caller, 'tools/call', capture, out);
   }
   return { load, list, callHidden, isApp: (cfg, a) => cfg.apps.includes(a), isCaller: (cfg, id) => cfg.callers.some((c) => c.id === id), isTool: (t) => typeof t === 'string' && TOOL.test(t) };
 }

@@ -6,6 +6,7 @@ import { analyze, buildReport } from '../scanner/index.js';
 import { BOUNDS, ConfigError, TOOL_NAME, credentialLike, nameOk, normalizeConfig } from './config.js';
 import { freshConfig } from './fixture.js';
 import { BANNER, PROVENANCE, TAG_TEXT } from './provenance.js';
+import { mockCallTrace, mockListTrace } from './aggregateTrace.js';
 import { createReal } from './real.js';
 import { audit, callAggregate, callMember, callerOf, listAggregate, listMember, memberOf } from './sim.js';
 
@@ -59,7 +60,8 @@ export function createGatewayRouter({ getMode = () => 'mock', env = process.env,
 
   router.post('/list', json, wrap((req, res) => {
     const p = parse(req.body, ['config', 'view', 'caller', 'member']);
-    res.json({ claim: CLAIM, view: p.view, caller: p.caller.id, ...listing(p) });
+    const listed = listing(p);
+    res.json({ claim: CLAIM, view: p.view, caller: p.caller.id, ...listed, trace: mockListTrace({ ...p, listed }) });
   }));
 
   router.post('/call', json, wrap((req, res) => {
@@ -69,7 +71,10 @@ export function createGatewayRouter({ getMode = () => 'mock', env = process.env,
     if (req.body.arguments !== undefined && (!isObj(req.body.arguments) || argsLookLikeCredentials(req.body.arguments))) throw new ConfigError('arguments', 'must be a small object with no credential in it');
     const out = p.view === 'direct' ? callMember(p.cfg, p.member, p.caller.id, req.body.tool) : callAggregate(p.cfg, p.caller.id, req.body.tool);
     const { ok, trace, ...rest } = out;
-    res.status(ok ? 200 : 403).json({ claim: CLAIM, ...rest, demoTrace: { note: 'Demo only: a real gateway would show the caller just the refusal.', steps: trace } });
+    res.status(ok ? 200 : 403).json({
+      claim: CLAIM, ...rest, demoTrace: { note: 'Demo only: a real gateway would show the caller just the refusal.', steps: trace },
+      trace: mockCallTrace({ ...p, tool: req.body.tool, args: req.body.arguments, out }),
+    });
   }));
 
   router.post('/audit', json, wrap((req, res) => {
@@ -130,10 +135,10 @@ export function createGatewayRouter({ getMode = () => 'mock', env = process.env,
     if (req.body.confirm !== true) return bad(res, 'confirm must be true: this sends a real tools/call to the gateway');
     const seen = await real.list(cfg, req.body.app, req.body.caller);
     if (seen.ok && seen.tools.some((t) => t.name === req.body.tool)) {
-      return res.status(409).json({ error: 'listed_tool', message: 'That tool is in this caller\'s listing. This page only tests that a hidden name is refused; call a listed tool from the Server page, behind the confirm dialog.' });
+      return res.status(409).json({ error: 'listed_tool', message: 'That tool is in this caller\'s listing. This page only tests that a hidden name is refused; call a listed tool from the Server page, behind the confirm dialog.', listTrace: seen.trace });
     }
     const out = await real.callHidden(cfg, req.body.app, req.body.caller, req.body.tool);
-    res.json({ claim: REAL_CLAIM, reading: READING, app: req.body.app, caller: req.body.caller, tool: req.body.tool, listedFirst: seen.ok, ...out });
+    res.json({ claim: REAL_CLAIM, reading: READING, app: req.body.app, caller: req.body.caller, tool: req.body.tool, listedFirst: seen.ok, listTrace: seen.trace, ...out });
   }));
 
   return router;
