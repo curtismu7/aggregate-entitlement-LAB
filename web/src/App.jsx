@@ -3,6 +3,8 @@ import ShelfLink from "./components/ShelfLink.jsx";
 import VerifyMark from "./components/VerifyMark.jsx";
 import { get, post } from "./lib/api.js";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
+import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
+import { pageTalkSteps } from "./story/StoryPanel";
 import Stories from "./pages/Stories.jsx";
 import Limits from "./pages/Limits.jsx";
 import Gateway from "./pages/Gateway.jsx";
@@ -18,6 +20,7 @@ const store = {
 
 function Shell() {
   const present = usePresent();
+  const [talkOpen, setTalkOpen] = useState(false);
   const [page, setPage] = useState(() => (PAGES.some(([id]) => id === window.location.hash.slice(1)) ? window.location.hash.slice(1) : "gateway"));
   const [theme, setTheme] = useState(() => store.read("aggregate-entitlement-theme") || "system");
   const [fontStep, setFontStep] = useState(() => { const f = store.read("aggregate-entitlement.font"); return ["S", "M", "L"].includes(f) ? f : "M"; });
@@ -65,6 +68,7 @@ function Shell() {
           theme={{ value: theme === "system" ? "auto" : theme, onChange: (t) => setTheme(t === "auto" ? "system" : t) }}
           fontSize={{ value: fontStep, onChange: setFontStep }}
           present={{ active: Boolean(present?.present), onToggle: () => present?.set(!present?.present), label: "Present" }}
+          talkTrack={{ active: talkOpen, onToggle: () => setTalkOpen((v) => !v) }}
           help={{ href: "https://github.com/curtismu7/aggregate-entitlement-LAB#readme" }}
           version={modeInfo?.version || null}
           onReset={gw.reset}
@@ -81,6 +85,8 @@ function Shell() {
         {page === "stories" && <Stories />}
         {page === "limits" && <Limits />}
       </main>
+      <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={pageTalkSteps()} />
+
     </>
   );
 }
