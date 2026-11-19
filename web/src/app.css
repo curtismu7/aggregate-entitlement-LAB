@@ -113,6 +113,7 @@ main:focus:not(:focus-visible) { outline: none; }
 
 /* Diagram guide: the step detail; its messages are the On the wire panel below. */
 .guide { margin-top: 1rem; }
+.step-num { display: inline-grid; place-items: center; min-width: 1.4rem; height: 1.4rem; border-radius: 999px; background: var(--accent-gradient); color: var(--on-accent); font: 700 0.75rem var(--font-mono); margin-right: 0.5em; vertical-align: 2px; }
 
 /* On the wire panel: request and response side by side, the token split into its three parts, key claims marked. */
 .wire h4 { margin: 0.5rem 0 0.25rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }

@@ -63,7 +63,7 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
   const learnBottom = (
     <>
       <Glossary />
-      <h3>See it drawn</h3>
+      <h3><span className="step-num" aria-hidden="true">8</span>See it drawn</h3>
       <p className="muted small">Press Simulate to walk a call through the gateway, or drag the boxes.</p>
       <Diagram theme={theme} gw={real ? undefined : gw} />
     </>
@@ -71,7 +71,7 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
   if (real) {
     return (
       <>
-        <h2>Entitled listing: each caller sees only its own tools</h2>
+        <h2><span className="step-num" aria-hidden="true">1</span>Entitled listing: each caller sees only its own tools</h2>
         <Intro real />
         <SixChecks real active={REAL_LAYERS[realLayer] || []} note={realLayer ? (realLayer === "policy" ? "Highlighted: the last refusal matches a policy check. The gateway's message does not say whether it was the member's policy or the aggregate cap." : realLayer === "key" ? "The last refusal came before any check: the agent key was not accepted." : "Highlighted: the check the last refusal matches (our reading of the gateway's message).") : null} />
         <GatewayReal onLayer={setRealLayer} />
@@ -121,12 +121,13 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
   ].filter(Boolean);
   return (
     <>
-      <h2>Entitled listing: each caller sees only its own tools</h2>
+      <h2><span className="step-num" aria-hidden="true">1</span>Entitled listing: each caller sees only its own tools</h2>
       <p className="lede"><strong>{BANNER}.</strong> Mock simulates it in this process; nothing leaves this computer. Start with "Try this", or pick a caller and call a tool you were not shown.</p>
       <Intro real={false} />
       <SixChecks active={stopped ? [stopped] : []} note={stopped ? `Highlighted: the check that stopped ${state.call.name}.` : state.call?.ok ? `${state.call.name} passed all six checks.` : null} />
       <TryThis onRun={runStep} current={tryStep} disabled={busy} />
 
+      <h3><span className="step-num" aria-hidden="true">2</span>Who is asking, and through what</h3>
       <div className="card controls" role="group" aria-label="Who is asking, and through what">
         <label>Caller
           <select value={caller} onChange={(e) => patch({ caller: e.target.value, call: null, scan: null })}>{callers.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
@@ -144,7 +145,7 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
       </div>
       {err && <p className="alert" role="alert">{err}</p>}
 
-      <h3>What {callerLabel} sees (tools/list)</h3>
+      <h3><span className="step-num" aria-hidden="true">3</span>What {callerLabel} sees (tools/list)</h3>
       <div className="card" aria-busy={busy} data-testid="listing">
         {!listing ? <p className="muted">Loading...</p> : (
           <>
@@ -160,7 +161,7 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
         )}
       </div>
 
-      <h3>Call a tool by name</h3>
+      <h3><span className="step-num" aria-hidden="true">4</span>Call a tool by name</h3>
       <div className="card">
         <p className="muted small">Type any name, including one that is not in the list above. A tool hidden from the list is refused here too.</p>
         <div className="gw__row">
@@ -188,7 +189,7 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
 
       <GatewayTrace exchanges={exchanges} source="mock" basisNote={`Simulated: this lab's in-process gateway ran the checks in this order, so each decision is what it computed (nothing here was measured on a gateway). It models ${BANNER}. Real mode shows the actual gateway.`} />
 
-      <h3>Scan this listing</h3>
+      <h3><span className="step-num" aria-hidden="true">5</span>Scan this listing</h3>
       <div className="card">
         <p className="muted small">The scanner reads the list exactly as {callerLabel} sees it. A tool hidden from this caller is not scanned.</p>
         <button type="button" className="btn" onClick={scan} disabled={busy || !listing}>Scan as {callerLabel}</button>
@@ -201,7 +202,7 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
         )}
       </div>
 
-      <h3>Demo audit view</h3>
+      <h3><span className="step-num" aria-hidden="true">6</span>Demo audit view</h3>
       <div className="card">
         <p className="muted small"><strong>Not what the caller sees.</strong> This view names the tools that were hidden from {callerLabel} and the first layer that stopped each one.</p>
         <div className="gw__scroll">
@@ -214,7 +215,7 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
         </div>
       </div>
 
-      <h3>Edit the policy</h3>
+      <h3><span className="step-num" aria-hidden="true">7</span>Edit the policy</h3>
       <details className="card" open>
         <summary>Members, member policy and the aggregate cap</summary>
         <p className="muted small">Every box here is a policy field the gateway reads. Change one and the lists above change. Reset puts them all back.</p>
