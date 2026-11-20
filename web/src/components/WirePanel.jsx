@@ -5,7 +5,7 @@ import Json from "./JsonPane.jsx";
 // "On the wire": request, response, the token decoded claim by claim, and what the step protects against.
 // All values are examples. `wire` comes from lib/wire.js. A message goes to Json whole (request line, headers, blank line, JSON body):
 // the headers stay text and the body gets its own Form | JSON pane. The token's raw string is shown by Json in its three colours.
-const HOT = ["method", "tools", "name", "message"]; // what this lab's payloads are about: the call, and which tools are listed or refused
+const HOT = ["method", "name"]; // what this lab's payloads are about: the call (method) and the tool it names, listed or refused. The refusal itself is red by default (error)
 const fmt = (v) => (typeof v === "object" ? JSON.stringify(v) : String(v));
 
 function Message({ title, m }) {
