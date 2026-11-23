@@ -62,10 +62,12 @@ export function realConfig(s) {
 export function readRefusal(err) {
   const msg = String(err?.message || '');
   if (err?.httpStatus === 401) return 'key';
-  if (/not exposed by this aggregate/i.test(msg)) return 'tool-filter';
-  if (/refused by policy|blocked by policy|not allowed|forbidden/i.test(msg) || err?.httpStatus === 403) return 'policy';
+  if (err?.httpStatus === 403) return 'policy';
+  // Fault words are read first: a fault whose text also carries policy wording ("timed out: not allowed") is a fault, not a refusal.
   if (/failed to connect|unreachable|connection refused|timed out/i.test(msg)) return 'unreachable';
   if (/unknown tool|tool not found|no such tool/i.test(msg)) return 'unknown';
+  if (/not exposed by this aggregate/i.test(msg)) return 'tool-filter';
+  if (/refused by policy|blocked by policy|not allowed|forbidden/i.test(msg)) return 'policy';
   return 'other';
 }
 

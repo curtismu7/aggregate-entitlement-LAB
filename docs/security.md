@@ -17,6 +17,7 @@ This lab can ask a gateway the operator names (Real), so each rule below has a t
 | Server redirects are never followed (a key must not travel) | `mcp/http.js` | the Real client sets `redirect: 'manual'`; `gateway.real.test.js` |
 | Everything from a gateway renders as inert text; strict CSP and hardening headers | `web/src/lib/Untrusted.jsx`, `app.js` | web `untrusted.test.jsx` |
 | Real is refused with 409 and the how-to when it is not configured; the default mode is Real only if it is configured | `app.js` | `gateway.real.test.js` "not configured", "rule 19" |
+| The run records (rule 27) hold no key, no tool name on a stdout line and no gateway address; a recorder that throws never breaks an answer; the vendored files are pinned; the lab reads no logs and mounts no Docker socket | `server/src/runObs.js` | `server/test/runObs.test.js`; `scripts/run-observability.pin.test.mjs` |
 | The container publishes its port on `127.0.0.1` only and runs as non-root | `docker-compose.yml`, `Dockerfile` | `packaging.test.js` |
 | The scan rules are heuristics | `scanner/` | `scanner.test.js`, `scanner.legacy.test.js`; [scan-rules.md](scan-rules.md) says what each one misses |
 

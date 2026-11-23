@@ -19,6 +19,8 @@ An MCP aggregate puts several MCP servers behind one gateway URL. Without a filt
 5. **Words on this page** (glossary) and **See it drawn**: a ReactFlow diagram loaded from `diagrams/gateway.json` (movable boxes, Simulate, Reset diagram, speed).
 6. **What Privilege did**: under the call result (Mock) or the Real controls, each call to the gateway: the exact request, the exact response and the decisions in between. In Mock the lab's own simulated gateway computed the checks (marked as such); in Real the gateway reports no per-check detail, so decisions are only *inferred* from the status or *observed* in the response, and the agent key is never shown. The panel is the shared `GatewayTrace`, vendored byte for byte and pinned by a hash.
 
+7. **What each layer logged for this run** (rule 27): the shared run-observability panel under the trace, for the one request the page just made. See below.
+
 Also: Stories (one story, with presenter mode, the Present button or the p key) and Limits (what a scan cannot catch). A banner on every page and in presenter mode says what is simulated.
 
 ## Run it
@@ -59,9 +61,33 @@ Read from the process environment, then `STANDALONE_ENV`, then `~/Development/.e
 
 For Docker, put the same names in the environment of `docker compose` (the compose file passes `AGG_ENT_GW_URL`, `AGG_ENT_GW_APPS`, `AGG_ENT_GW_VERSION` and the keys `_ANALYST`, `_OPERATOR`, `_GUEST` and `_LAB_AGENT`). Real is owner-run: agents use the Mock.
 
+## What each layer logged for this run (rule 27)
+
+Under the trace the page shows the shared run-observability panel for ONE run: the request the page just made, a `tools/list` or a `tools/call` by name (the call's record once you have called, the listing's before that). Six layers, each row with its time, an outcome and an origin tag; ids and addresses are masked. The panel is the shared one, vendored byte for byte and pinned by a hash; this lab's own mapping is the one file `server/src/runObs.js`.
+
+| Layer | Mock | Real |
+| --- | --- | --- |
+| Person | `not-logged`: the lab has no sign-in | `not-logged`: the lab calls with an agent access key, not as a person |
+| Agent | one `info` row: the caller asked (a simulated caller: no key is taken and there is no OBO token) | `not-logged`: the caller is an agent key, not an OBO token; the gateway's log of that key is not read |
+| Authorize | `not-logged`: the lab does not call PingOne Authorize | the same |
+| Privilege | the simulation's policy decisions (`allowed` or `refused`: the ToolFilter, the member's own policy, the aggregate cap), `simulated`; the lab's own policy, not PingOne Privilege | `not-logged`: Privilege's policy log is not read and the gateway reports no per-check detail |
+| Agent gateway | the simulated aggregate's answer, `simulated`: a listing with tools is `allowed`; the answer to a call repeats the decision above it, so it is `info` | what the lab RECEIVED from your gateway, as `response` rows (never `logged`): a 403 `refused`; a usable tool list `allowed`; a JSON-RPC error inside a 200 or an `isError` reply `refused` only when the lab's own reading of its words matches one of the four refusal checks (the row says so), otherwise `info` (the tool's own outcome, or a fault the lab cannot tell apart from a refusal); a 401 (the agent key not accepted) `info`; an unreadable body or any other status `info`; which check a refusal matches is the lab's reading, in the row's words |
+| Resource server | a row only when the configuration marks a member unreachable or needing the caller's own sign-in (`info`: a fault and a credential state are not policy decisions); the simulation has no member server and nothing is run | `not-logged`: the member servers behind the aggregate write no log this lab reads |
+
+- **A run is one request.** Each listing and each call is its own run with its own id. The server keeps the last 12 of each kind per mode in memory (a Mock listing is recomputed on every edit, so listings and calls are counted apart, and Mock and Real apart); a run still being made is never dropped. A run id is the kind, random bits chosen when the server starts and a counter, so ids do not repeat after Reset or a restart (the random part is probabilistic, not a guarantee). The page asks for a run by the id its own answer carried. A request the lab did not accept (a malformed name, a credential typed into an argument) begins no run and the answer says so. The scan and the demo audit view are not gateway requests and add no row.
+- **More runs than the panel shows.** The "See it drawn" diagram asks the simulation for the caller's listing too, so a page load writes two listing runs (six stdout lines); both are real requests the simulation computed, and the panel shows the page's own.
+- **Time = when the lab recorded it.** In Mock the simulation answers in one instant, so the rows of one request share one time (their order is kept). In Real a row is stamped with the time of the reply (when the lab had it, not when it finished closing the session). A run that is partial (a reply that never came, or a call that was not sent because the name is in the caller's listing) says so on the page.
+- **Where this lab's run leaves logs.** On the container's stdout, one line per row: `<time> aggregate-entitlement-lab decision step=... layer=... actor=<caller name> result=passed|stopped|unclear|no-reply cause=... run=<id>`. The time on the line is the row's time. A line never holds an agent key, a tool name or a gateway address.
+- **Where they can stream.** Nowhere today: the family log collector (`shared/ping-log-collector`) reads a fixed list of containers and this lab's is not on it, so it would need an entry first. If it were added, the SIEM time would be Docker's wall-clock time for the line, not the time in the line.
+- **What is `not-logged` today.** Authorize has no container log (and this lab does not call it); Privilege's SIEM index and console activity log are not read (this lab reads no logs, so it vendors the core only and has no run-observability environment variable); the PingOne audit reader does not exist; PingFederate's `audit.log` is not shipped (not used here); the gateway's refusal and block line shapes are unconfirmed.
+- **Reset.** `POST /api/reset` (`npm run reset`) puts the mode back to its default and clears the run records. The page's own Reset button reloads the default policy and clears the Mock call; it does not call the API and keeps the records, so the Real checks on the page stay as they are.
+- **Visitors.** The run records are shared by everyone who reaches the container: a record is fetched by its id, there is no list, and the last 12 per kind and mode are kept, so another visitor's burst of requests can push yours out ("no longer kept").
+- **Inherited, not changed.** The gateway trace above the panel (shared `GatewayTrace`) and the Mock listing keep showing the last listing while the next one is asked for; this panel shows "Collecting this run's logs…" instead of an older record.
+- **Not verified.** Nothing here was run against a real gateway: Real is owner-run and the tests use an in-process stub on loopback. The shared client does not say which of its requests got a status or a JSON-RPC error (the opening handshake or the call itself), so a row says "while the lab was opening or making" the call and never "answered tools/list" for a call that failed. The shared client also drops the error code, so a failure that carries exactly its "unreachable" or "timed out" words is read as no connection; a gateway refusal that used those exact words could, in rare cases, be read this way. It is never shown as allowed.
+
 ## Test
 
-`npm test` runs the server (`node --test`), web (vitest) and forbidden-strings gate tests. `npm run build`, `npm run content-pack` and `npm run doctor` are the other checks. The CI also runs the forbidden-strings gate, gitleaks and the attribution check. Run `scripts/check-ui-standard.sh` after touching the vendored stylesheet.
+`npm test` runs the server (`node --test`), web (vitest), the forbidden-strings gate test and the pin tests of the vendored `GatewayTrace` and run-observability files. `npm run build`, `npm run content-pack` and `npm run doctor` are the other checks. The CI also runs the forbidden-strings gate, gitleaks and the attribution check. Run `scripts/check-ui-standard.sh` after touching the vendored stylesheet.
 
 ## Security rules
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Untrusted } from "../lib/Untrusted.jsx";
 import { get, post } from "../lib/api.js";
 import GatewayTrace from "../gateway-trace/GatewayTrace.jsx";
+import RunObs, { headOf } from "../components/RunObs.jsx";
 
 // Real mode of the Entitled listing page: the same questions asked of a real gateway's MCP aggregate apps, with the
 // operator's agent keys (server/src/gateway/real.js; keys never reach the browser). Only a name that is NOT in the
@@ -17,6 +18,8 @@ const READING_TEXT = {
   key: "the gateway did not accept the agent key, before any check",
   other: "does not match a known check",
 };
+// What the server said about the run of a failed answer, kept on the failure object so the panel reads the same field as for a success.
+const runOf = (r) => (r.data !== null && typeof r.data === "object" && "run" in r.data ? { run: r.data.run, runNote: r.data.runNote } : {});
 const members = (tools) => Object.entries(tools.reduce((m, t) => { const a = t.name.includes("__") ? t.name.split("__")[0] : "(no alias)"; m[a] = (m[a] || 0) + 1; return m; }, {}));
 
 export default function GatewayReal({ onLayer }) {
@@ -28,6 +31,7 @@ export default function GatewayReal({ onLayer }) {
   const [tool, setTool] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [result, setResult] = useState(null);
+  const [calling, setCalling] = useState(false);
 
   useEffect(() => {
     get("/api/gateway/real").then((r) => {
@@ -43,7 +47,7 @@ export default function GatewayReal({ onLayer }) {
     const out = {};
     for (const a of info.apps) {
       const r = await post("/api/gateway/real/list", { app: a, caller });
-      out[a] = r.ok ? r.data : { ok: false, refusal: { status: r.status, message: r.data?.message || "the request failed", layer: "other" } };
+      out[a] = r.ok ? r.data : { ok: false, refusal: { status: r.status, message: r.data?.message || "the request failed", layer: "other" }, ...runOf(r) };
       setLists({ ...out });
     }
     setBusy(false);
@@ -63,12 +67,19 @@ export default function GatewayReal({ onLayer }) {
 
   async function call() {
     setBusy(true);
-    const r = await post("/api/gateway/real/call", { app, caller, tool: tool.trim(), confirm: true });
-    setBusy(false);
-    const res = r.ok ? r.data : { ok: false, blocked: true, message: r.data?.message || `The request failed (${r.status}).`, listTrace: r.data?.listTrace };
-    setResult({ ...res, name: tool.trim(), app });
-    onLayer(r.ok && !r.data.ok ? r.data.refusal.layer : null);
+    setCalling(true);
+    try {
+      const r = await post("/api/gateway/real/call", { app, caller, tool: tool.trim(), confirm: true });
+      setBusy(false);
+      const res = r.ok ? r.data : { ok: false, blocked: true, message: r.data?.message || `The request failed (${r.status}).`, listTrace: r.data?.listTrace, ...runOf(r) };
+      setResult({ ...res, name: tool.trim(), app });
+      onLayer(r.ok && !r.data.ok ? r.data.refusal.layer : null);
+    } finally { setCalling(false); }
   }
+
+  // Rule 27: the run the panel shows is the hidden-name call's when there is one, else the listing of the selected app. While the request for it is still out, nothing older is shown.
+  const runHead = result ? headOf(result) : lists[app] ? headOf(lists[app]) : undefined; // `loading` wins over `head` while a call is out
+  const runLoading = calling || (!result && !lists[app] && busy);
 
   // "What Privilege did" (rule 25): every call made to the gateway so far, exactly as sent and answered. An app's listing, then the
   // listing that came before a hidden-name call, then the call.
@@ -150,6 +161,7 @@ export default function GatewayReal({ onLayer }) {
         )}
       </div>
       <GatewayTrace exchanges={exchanges} source="real" />
+      <RunObs source="real" head={runHead} loading={runLoading} empty="Ask the gateway above, and the record of that call shows here." />
     </>
   );
 }

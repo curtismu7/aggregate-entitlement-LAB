@@ -7,7 +7,8 @@ browser (web/dist)  --same origin-->  Express (server/src/app.js)
                                         |-- security.js        loopback bind, Host check (+ LAB_ALLOWED_HOSTS), same-origin writes
                                         |-- gateway/sim.js     the simulated aggregate (Mock): pure, no I/O
                                         |-- gateway/real.js    Real: tools/list and one hidden-name call against your gateway
-                                        |-- gateway/routes.js  /api/gateway/*: Mock routes, Real routes, the mode gate
+                                        |-- gateway/routes.js  /api/gateway/*: Mock routes, Real routes, the mode gate, GET /run (rule 27)
+                                        |-- runObs.js          rule 27: the lab's run records and stdout lines (the vendored runObservability.js builds the record)
                                         |-- scanner/           rule table, engine, unicode, report (Scan this listing)
                                         |-- mcp/http.js        the Streamable HTTP client Real uses (no redirects, caps)
                                         |-- redact.js          an agent key never leaves, even if the gateway echoes it
@@ -17,7 +18,7 @@ diagrams/gateway.json  --loaded by name-->  web/src/diagrams/ (diagram-studio/1 
 
 ## One path through it
 
-1. **Mock.** The browser holds the policy it is editing and sends it with each request; the engine answers. Nothing is stored on the host.
+1. **Mock.** The browser holds the policy it is editing and sends it with each request; the engine answers. The only thing the host keeps is the last few run records (rule 27, in memory, bounded; see the README).
 2. **Real.** The header toggle calls `POST /api/mode`. Real reads `AGG_ENT_GW_*` settings (environment, `STANDALONE_ENV`, then `~/Development/.env`), lists the chosen caller's tools in each configured aggregate app and compares them. A hidden name can be called to test the refusal; the six checks highlight the one the refusal matches (our reading).
 3. **Scan.** `Scan this listing` runs the scanner over the list as that caller sees it.
 

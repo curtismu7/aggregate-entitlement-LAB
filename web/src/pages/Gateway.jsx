@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ScanResult from "../components/ScanResult.jsx";
 import GatewayTrace from "../gateway-trace/GatewayTrace.jsx";
+import RunObs, { headOf } from "../components/RunObs.jsx";
 import { Glossary, Intro, RealTryThis, SixChecks, TryThis } from "../components/GatewayLearn.jsx";
 import Diagram from "./Diagram.jsx";
 import GatewayReal, { REAL_LAYERS } from "./GatewayReal.jsx";
@@ -42,19 +43,28 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
   const [toolName, setToolName] = useState("");
   const [tryStep, setTryStep] = useState(null);
   const [realLayer, setRealLayer] = useState(null);
+  const [listHead, setListHead] = useState(null); // what the server said about the run of the newest listing: { at: the request's inputs, head }
+  const [callPending, setCallPending] = useState(false);
   const seq = useRef(0);
 
   // Re-evaluate whenever the config, the caller, the view or the member changes.
   useEffect(() => {
+    setListHead(null); // the head of an older listing is not the answer to this request
     if (!config || modeSource === "real") return undefined;
     const my = ++seq.current;
+    const at = { config, caller, view, member };
     setBusy(true);
     const body = { config, caller, view, ...(view === "direct" ? { member } : {}) };
     Promise.all([post("/api/gateway/list", body), post("/api/gateway/audit", body)]).then(([l, a]) => {
       if (my !== seq.current) return;
       setBusy(false);
+      setListHead({ at, head: headOf(l.data) });
       if (l.ok && a.ok) { setListing(l.data); setRows(a.data.rows); setErr(null); }
       else { setListing(null); setRows(null); setErr(l.data?.message || a.data?.message || `The simulated gateway refused the request (${l.status}).`); }
+    }).catch(() => {
+      if (my !== seq.current) return;
+      setBusy(false); setListing(null); setRows(null); setListHead({ at, head: { bad: true } });
+      setErr("The simulated gateway did not answer.");
     });
     return () => { seq.current += 1; };
   }, [config, caller, view, member, modeSource]);
@@ -92,9 +102,12 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
 
   async function call(at = { caller, view, member, tool: toolName.trim(), config }) {
     setBusy(true);
-    const r = await post("/api/gateway/call", { config: at.config, caller: at.caller, view: at.view, ...(at.view === "direct" ? { member: at.member } : {}), tool: at.tool });
-    setBusy(false);
-    patch({ call: { status: r.status, ok: r.ok, data: r.data, name: at.tool } });
+    setCallPending(true);
+    try {
+      const r = await post("/api/gateway/call", { config: at.config, caller: at.caller, view: at.view, ...(at.view === "direct" ? { member: at.member } : {}), tool: at.tool });
+      setBusy(false);
+      patch({ call: { status: r.status, ok: r.ok, data: r.data, name: at.tool } });
+    } finally { setCallPending(false); }
   }
   // A guided step: set the controls, and make the call it names, against the current config.
   async function runStep(s) {
@@ -114,6 +127,10 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
   }
 
   const c = state.call;
+  // Rule 27: the run the panel shows is the call's when there is one, else the listing's. While the request for it is still out, nothing older is shown.
+  const listShown = listHead && listHead.at.config === config && listHead.at.caller === caller && listHead.at.view === view && listHead.at.member === member ? listHead.head : undefined;
+  const runHead = c ? headOf(c.data) : listShown;
+  const runLoading = callPending || (!c && listShown === undefined);
   // "What Privilege did" (rule 25): the listing the caller sees, then the call, each exactly as the simulated gateway answered.
   const exchanges = [
     listing?.trace && { step: 1, title: "Gateway check: tools/list", status: listing.trace.response.status, trace: listing.trace },
@@ -188,6 +205,8 @@ export default function Gateway({ gw, modeSource = "mock", theme }) {
       </div>
 
       <GatewayTrace exchanges={exchanges} source="mock" basisNote={`Simulated: this lab's in-process gateway ran the checks in this order, so each decision is what it computed (nothing here was measured on a gateway). It models ${BANNER}. Real mode shows the actual gateway.`} />
+
+      <RunObs source="mock" head={runHead} loading={runLoading} empty="Nothing has run yet." />
 
       <h3><span className="step-num" aria-hidden="true">5</span>Scan this listing</h3>
       <div className="card">

@@ -62,7 +62,7 @@ test('call: a hidden tool is refused by name with 403 and the same words as an u
     const ok = await post(app, 'call', { caller: 'operator', tool: 'crm__update_customer', arguments: { id: 'c-1' } });
     assert.equal(hidden.status, 403); assert.equal(unknown.status, 403); assert.equal(ok.status, 200);
     assert.equal(hidden.json.message, unknown.json.message);
-    const body = ({ demoTrace, trace, ...rest }) => rest; // the demo trace and the gateway trace's decisions are labelled demo only and differ by design
+    const body = ({ demoTrace, trace, run, ...rest }) => rest; // the demo trace and the gateway trace's decisions are labelled demo only and differ by design; the run id is one per request (rule 27)
     assert.deepEqual(body(hidden.json), body(unknown.json), 'the whole body, not only the message');
     assert.deepEqual(hidden.json.trace.response.body, unknown.json.trace.response.body, 'the reply shown in the trace is the same for a hidden and an unknown name');
     assert.equal(hidden.json.error, 'tool_not_available');
@@ -80,7 +80,7 @@ test('direct view: an unknown tool gets the same refusal body as a hidden one, a
     const unknown = await direct('analyst', 'nothing_here');
     assert.equal((await direct('operator', 'update_customer')).status, 200, 'control: the operator may call it');
     assert.equal(hidden.status, 403); assert.equal(unknown.status, 403);
-    const body = ({ demoTrace, trace, ...rest }) => rest;
+    const body = ({ demoTrace, trace, run, ...rest }) => rest; // the run id is one per request (rule 27)
     assert.deepEqual(body(hidden.json), body(unknown.json));
     assert.deepEqual(hidden.json.trace.response.body, unknown.json.trace.response.body, 'the reply shown in the trace is the same too');
     assert.equal(unknown.json.error, 'tool_not_available');
@@ -163,7 +163,7 @@ test('hostile input: bad shapes are 400 with a fixed message, never a 500, never
       const r = await post(app, 'list', body);
       assert.equal(r.status, 400, JSON.stringify(body));
       assert.equal(r.json.claim.banner, BANNER);
-      assert.ok(r.text.length < 400);
+      assert.ok(r.text.length < 480, 'the answer is the fixed words, the claim and the note that no run began: no typed value is echoed'); // 400 before the run fields (rule 27)
     }
     for (const p of ['call', 'audit', 'scan', 'list']) assert.equal((await app.call('POST', `/api/gateway/${p}`, '[1,2', { ...raw, raw: true })).status, 400);
     assert.equal((await post(app, 'call', { caller: 'analyst', tool: 5 })).status, 400);

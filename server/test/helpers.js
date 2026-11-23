@@ -1,10 +1,12 @@
 import { createApp } from '../src/app.js';
 import { startHttpServer } from '../src/index.js';
+import { createRunLog } from '../src/runObs.js';
 
 // Tests listen on an ephemeral loopback port (port 0), so they never collide with the app's own port or each other.
 // A real app on a loopback port. `call` sends the Origin a browser page would, unless told not to.
-export async function startApp({ env = {} } = {}) {
-  const app = createApp({ env });
+// The run log writes no stdout line unless a test passes its own (a test that is not about stdout must not print one line per decision into the CI log).
+export async function startApp({ env = {}, runLog = createRunLog({ write: () => {} }) } = {}) {
+  const app = createApp({ env, runLog });
   const srv = await startHttpServer({ port: 0, host: '127.0.0.1', app });
   const origin = `http://127.0.0.1:${srv.port}`;
   async function call(method, p, body, { headers = {}, origin: o = origin, raw = false } = {}) {
