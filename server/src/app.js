@@ -5,7 +5,7 @@
 //  - an agent key is never in any response, log line or error (gateway/real.js scrubs every message)
 //  - Mock never opens a socket; Real asks only the gateway named in the settings, and only lists tools or sends a name that is
 //    NOT in the caller's listing (gateway/routes.js)
-//  - rule 3: POST /api/reset puts the server's only state (the mode) back to its default
+//  - rule 3: POST /api/reset puts the server's state back to its default: the mode, and the run records of rule 27 (a bounded list per mode and kind, runObs.js)
 //  - rule 19: the Mock/Real toggle is server-side; POST /api/mode takes exactly { source }; GET /api/info answers
 //    { source, realAvailable, realReason }; Real is 409-refused with the how-to when it is not configured
 import fs from 'node:fs';
@@ -15,6 +15,7 @@ import express from 'express';
 import { createGatewayRouter } from './gateway/routes.js';
 import { readSettings, realConfig } from './gateway/real.js';
 import { createHealth } from './health.js';
+import { createRunLog } from './runObs.js';
 import { LIMITS, RULES } from './scanner/rules.js';
 import { hostCheck, sameOriginWrites } from './security.js';
 import { shelfInfo } from './shelfLink.js';
@@ -23,7 +24,7 @@ const WEB_DIST = process.env.WEB_DIST || path.resolve(path.dirname(fileURLToPath
 const isObject = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const bad = (res, message, status = 400, error = 'bad_request') => res.status(status).json({ error, message });
 
-export function createApp({ env = process.env, health = createHealth({ env }) } = {}) {
+export function createApp({ env = process.env, health = createHealth({ env }), runLog = createRunLog() } = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.use(hostCheck(env));
@@ -51,7 +52,7 @@ export function createApp({ env = process.env, health = createHealth({ env }) } 
   const small = express.json({ limit: '16kb' });
   api.use(sameOriginWrites(env));
   api.use('/health', health.router);
-  api.use('/gateway', createGatewayRouter({ getMode: () => modeView().source, env }));
+  api.use('/gateway', createGatewayRouter({ getMode: () => modeView().source, env, runs: runLog }));
 
   api.get('/info', (_req, res) => res.set('Cache-Control', 'no-store').json(modeView()));
   api.post('/mode', small, (req, res) => {
@@ -63,9 +64,9 @@ export function createApp({ env = process.env, health = createHealth({ env }) } 
     res.json(modeView());
   });
 
-  // Reset (rule 3): the only state on the server is the mode, so Reset puts it back to the default. The policy a visitor edits
-  // lives in the browser (the page's Reset button fetches the default again); nothing else is stored.
-  api.post('/reset', small, (_req, res) => { mode = defaultMode(); res.json({ reset: true, ...modeView() }); });
+  // Reset (rule 3): the state on the server is the mode and the run records, so Reset puts the mode back to the default and clears the records. The policy a visitor edits
+  // lives in the browser (the page's Reset button fetches the default again and does not call this); nothing else is stored.
+  api.post('/reset', small, (_req, res) => { mode = defaultMode(); runLog.clear(); res.json({ reset: true, ...modeView() }); });
 
   // The scan rules and what a scan cannot catch, for the Limits page.
   api.get('/rules', (_req, res) => res.json({ rules: Object.entries(RULES).map(([id, r]) => ({ id, ...r })), limits: LIMITS }));
