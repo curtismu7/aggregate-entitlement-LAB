@@ -31,7 +31,8 @@ const panel = () => screen.getByTestId("run-observability");
 const rowsOf = () => within(screen.getByTestId("ro-table")).getAllByRole("row").filter((r) => r.hasAttribute("data-layer") && r.getAttribute("data-origin") !== "not-logged")
   .map((r) => ({ layer: r.getAttribute("data-layer"), outcome: r.getAttribute("data-outcome"), text: r.textContent }));
 async function callTool(user, name) {
-  await user.clear(screen.getByLabelText("Tool name"));
+  // The input is waited for: a synchronous lookup right after openPage raced the page's first render (a one-in-four flake).
+  await user.clear(await screen.findByLabelText("Tool name"));
   await user.type(screen.getByLabelText("Tool name"), name);
   await waitFor(() => expect(screen.getByRole("button", { name: "Call" })).toBeEnabled());
   await user.click(screen.getByRole("button", { name: "Call" }));

@@ -10,6 +10,7 @@ import { freshConfig } from '../src/gateway/fixture.js';
 import { createGatewayRouter } from '../src/gateway/routes.js';
 import { callAggregate, callMember, listAggregate, listMember } from '../src/gateway/sim.js';
 import { normalizeConfig } from '../src/gateway/config.js';
+import { readRefusal } from '../src/gateway/real.js';
 import { KEEP_RUNS, SERVICE, createRunLog, decisionLine, lineValue, mockCallEvents, mockListEvents, replyOf } from '../src/runObs.js';
 import { startApp } from './helpers.js';
 
@@ -542,18 +543,18 @@ test('Real call: the listing before it and the hidden name\'s reply are two `res
     const body = (await record(app, r.json.run.id)).json;
     const rec = body.record;
     assert.deepEqual(assertRunObservability(rec), []);
-    assert.deepEqual(shape(rec), [['gateway', 'allowed'], ['gateway', 'info']]);
-    assert.equal(rec.summary.refused, 0, 'a JSON-RPC error is a fault or a refusal the lab cannot tell apart: it is never counted as a refusal');
+    assert.deepEqual(shape(rec), [['gateway', 'allowed'], ['gateway', 'refused']]);
+    assert.equal(rec.summary.refused, 1, 'the fake gateway says "not exposed by this aggregate", which the lab reads as the ToolFilter: a policy stop, so it is refused');
     assert.ok(rows(rec).every((x) => x.origin === 'response'));
     assert.match(rows(rec)[1].message, /while the lab was opening or making tools\/call for a hidden name/);
-    assert.doesNotMatch(rows(rec)[1].message, /check 4|reading/, 'an information row names no check: the lab cannot tell which one a fault came from');
+    assert.match(rows(rec)[1].message, /The lab's own reading, not a gateway field: it matches check 4, the ToolFilter/);
     assert.equal(rec.coverage.privilege, 'not-logged');
     assert.match(rec.reasons.privilege, /not read by this lab/);
     assert.equal(body.partial, false);
     assert.deepEqual(lines.map((x) => / step=(\S+)/.exec(x)[1]), ['gateway-list', 'gateway-call']);
     assert.deepEqual(lines.map((x) => x.split(' ')[0]), rows(rec).map((x) => x.at));
     assert.ok(Date.parse(lines[0].split(' ')[0]) <= Date.parse(lines[1].split(' ')[0]));
-    assert.ok(/ result=unclear cause=jsonrpc-error /.test(lines[1]));
+    assert.ok(/ result=stopped cause=jsonrpc-refusal /.test(lines[1]));
     lines.forEach(noMatcherReads);
   }, { runLog });
 });
@@ -580,6 +581,10 @@ test('how each kind of reply is read: only a 403 is refused, a usable 200 allowe
     ['list', rpcError('boom'), 'info', /JSON-RPC error while the lab was opening or making tools\/list, inside a successful HTTP reply/],
     ['list', rpcResult({ tools: [] }), 'info', /no tools/],
     ['list', rawText, 'info', /could not read the gateway's answer/],
+    ['call', rpcError('"crm__export_all" is not exposed by this aggregate'), 'refused', /JSON-RPC error while the lab was opening or making tools\/call for a hidden name.*it matches check 4, the ToolFilter/],
+    ['call', rpcError('refused by policy'), 'refused', /JSON-RPC error.*it matches check 5 or 6/],
+    ['call', rpcError('boom'), 'info', /JSON-RPC error while the lab was opening or making tools\/call for a hidden name, inside a successful HTTP reply/],
+    ['call', rpcResult({ isError: true, content: [{ type: 'text', text: '"crm__export_all" is not exposed by this aggregate' }] }), 'refused', /tool error \(isError\).*it matches check 4, the ToolFilter/],
     ['call', rpcResult({ isError: true, content: [{ type: 'text', text: 'x' }] }), 'info', /tool error \(isError\): that is the tool's own outcome, not a policy stop/],
     ['call', rpcResult({ content: [{ type: 'text', text: 'ran' }] }), 'allowed', /did not refuse tools\/call for a hidden name/],
     ['call', rpcResult({ content: [] }), 'info', /no content/],
@@ -637,6 +642,20 @@ test('a call that got no reply is no row and no pass: a no-reply line, the recor
     assert.match(b.reasons.gateway, /got no reply/);
     assert.equal(b.summary.allowed, 0);
   }, { runLog });
+});
+
+test('an isError reply is refused only when the lab reads its text as a refusal; a JSON-RPC error is refused under the same reading (F2, F3)', () => {
+  const isErr = (text) => ({ ok: true, isError: true, text, ms: 3 });
+  const rpc = (message) => ({ ok: false, refusal: { status: null, message, layer: readRefusal({ message }) }, ms: 3 });
+  const asRefusal = isErr('"crm__export_all" is not exposed by this aggregate');
+  assert.equal(replyOf('tools/call', asRefusal, 'full').outcome, 'refused');
+  assert.equal(replyOf('tools/call', asRefusal, 'full').cause, 'tool-error-refusal');
+  assert.equal(replyOf('tools/call', isErr('the tool ran'), 'full').outcome, 'info');
+  assert.equal(replyOf('tools/call', isErr('the tool ran'), 'full').cause, 'tool-error');
+  assert.equal(replyOf('tools/call', rpc('"crm__export_all" is not exposed by this aggregate'), 'full').outcome, 'refused');
+  assert.equal(replyOf('tools/call', rpc('"crm__export_all" is not exposed by this aggregate'), 'full').cause, 'jsonrpc-refusal');
+  assert.equal(replyOf('tools/call', rpc('boom'), 'full').outcome, 'info');
+  assert.equal(replyOf('tools/call', rpc('boom'), 'full').cause, 'jsonrpc-error');
 });
 
 test('a gateway refusal that uses the shared client\'s own "unreachable" words is read as no connection, and is never shown as allowed (documented)', () => {

@@ -21,6 +21,7 @@
 // name or a gateway address. A test runs every line kind through the shared classify() for every product.
 import crypto from 'node:crypto';
 import { createMasker, createRunObservability, LAYERS } from './runObservability.js';
+import { readRefusal } from './gateway/real.js';
 
 export const SERVICE = 'aggregate-entitlement-lab';
 export const KEEP_RUNS = 12; // closed runs kept, per mode and per kind: a listing that is recomputed on every edit never pushes a call out
@@ -153,6 +154,11 @@ const READING = {
   other: 'it matches no known check',
 };
 
+// The four checks real.js readRefusal can match to a refusal. A JSON-RPC error or an isError reply that matches one is a policy stop as the lab reads it (F2, F3); any other
+// error is information, because the lab cannot tell a refusal from a fault.
+const REFUSAL_LAYERS = ['tool-filter', 'policy', 'unreachable', 'unknown'];
+const readAsOf = (layer) => ` The lab's own reading, not a gateway field: ${READING[layer] ?? READING.other}.`;
+
 // One call's answer -> an event, or null when there was no reply (the call did not connect or timed out). Only the answer in hand is read: nothing from an earlier call. The
 // gateway's own words are never copied into a row (they are on the page's gateway card, scrubbed of keys). A call the lab completed names its step. A call that failed does not: the
 // shared client does not say which of its requests (the opening handshake or the call itself) got the status or the JSON-RPC error, so the row says "while the lab was opening
@@ -168,7 +174,12 @@ export function replyOf(step, r, app) {
         ? done('allowed', 'tools-listed', `The gateway answered ${what} with ${n} tools for the agent key.`, { tools: n, ms: r.ms })
         : done('info', 'empty-list', `The gateway answered ${what} with no tools, so there is no usable listing to count as a pass.`, { tools: 0, ms: r.ms });
     }
-    if (r.isError === true) return done('info', 'tool-error', `The gateway answered ${what} with a tool error (isError): that is the tool's own outcome, not a policy stop, so it counts as information.`, { ms: r.ms });
+    if (r.isError === true) {
+      const layer = readRefusal({ message: r.text });
+      return REFUSAL_LAYERS.includes(layer)
+        ? done('refused', 'tool-error-refusal', `The gateway answered ${what} with a tool error (isError) that the lab reads as a refusal.${readAsOf(layer)}`, { ms: r.ms, reading: layer })
+        : done('info', 'tool-error', `The gateway answered ${what} with a tool error (isError): that is the tool's own outcome, not a policy stop, so it counts as information.`, { ms: r.ms });
+    }
     return typeof r.text === 'string' && r.text.length > 0
       ? done('allowed', 'tool-ran', `The gateway did not refuse ${what} and returned a tool result. A hidden name should be refused: check the aggregate's policy.`, { ms: r.ms })
       : done('info', 'no-content', `The gateway answered ${what} with no content, so the lab cannot read it as a tool result.`, { ms: r.ms });
@@ -185,6 +196,7 @@ export function replyOf(step, r, app) {
   const text = String(f.message ?? '');
   if (NO_REPLY.test(text)) return null;
   if (UNREAD.test(text)) return failed('info', 'unreadable', `The lab could not read the gateway's answer ${opening} as a tool result, so it counts as information.`, { ms: r.ms });
+  if (REFUSAL_LAYERS.includes(f.layer)) return failed('refused', 'jsonrpc-refusal', `The gateway answered with a JSON-RPC error ${opening}, inside a successful HTTP reply.${readAsOf(f.layer)}`, { ms: r.ms, reading: f.layer });
   return failed('info', 'jsonrpc-error', `The gateway answered with a JSON-RPC error ${opening}, inside a successful HTTP reply. The lab cannot tell a policy refusal from a fault, so it counts as information.`, { ms: r.ms, reading: f.layer });
 }
 
