@@ -171,6 +171,14 @@ test('realConfig and readRefusal', () => {
   assert.equal(readRefusal({ message: 'something else' }), 'other');
 });
 
+test('readRefusal: fault words are checked first and win over policy wording (A1)', () => {
+  assert.equal(readRefusal({ message: 'timed out: not allowed' }), 'unreachable');
+  assert.equal(readRefusal({ message: 'unreachable, forbidden' }), 'unreachable');
+  assert.equal(readRefusal({ message: 'unknown tool: not allowed' }), 'unknown');
+  assert.equal(readRefusal({ message: '"t" is not exposed by this aggregate' }), 'tool-filter', 'a policy wording alone is still a refusal');
+  assert.equal(readRefusal({ message: 'request is not allowed' }), 'policy');
+});
+
 test('realConfig carries the operator\'s version label, and drops one that is not a plain label', () => {
   const base = { AGG_ENT_GW_URL: 'https://gw.example.invalid', AGG_ENT_GW_APPS: 'a', AGG_ENT_GW_KEY_X: 'k' };
   assert.equal(realConfig({ ...base, AGG_ENT_GW_VERSION: 'v1.261106' }).version, 'v1.261106');

@@ -671,6 +671,18 @@ test('faults are information even when their words match a refusal check: a time
   assert.equal(replyOf('tools/call', isErr('refused by policy'), 'full').outcome, 'refused', 'a real policy refusal in isError stays refused');
 });
 
+test('a fault whose text also carries policy words is information, not a refusal (A1)', () => {
+  const isErr = (text) => ({ ok: true, isError: true, text, ms: 3 });
+  const rpc = (message) => ({ ok: false, refusal: { status: null, message, layer: readRefusal({ message }) }, ms: 3 });
+  for (const text of ['timed out: not allowed', 'unreachable, forbidden']) {
+    assert.equal(replyOf('tools/call', isErr(text), 'full').outcome, 'info', `isError: ${text}`);
+    assert.equal(replyOf('tools/call', isErr(text), 'full').cause, 'tool-error', `isError: ${text}`);
+    assert.equal(replyOf('tools/call', rpc(text), 'full').outcome, 'info', `rpc: ${text}`);
+    assert.equal(replyOf('tools/call', rpc(text), 'full').cause, 'jsonrpc-error', `rpc: ${text}`);
+  }
+  assert.equal(replyOf('tools/call', rpc('"crm__export_all" is not exposed by this aggregate'), 'full').outcome, 'refused', 'a policy wording alone stays refused');
+});
+
 test('a gateway refusal that uses the shared client\'s own "unreachable" words is read as no connection, and is never shown as allowed (documented)', () => {
   assert.equal(replyOf('tools/list', { ok: false, refusal: { status: null, message: 'MCP HTTP request unreachable (ECONNREFUSED)' } }), null);
   assert.equal(replyOf('tools/call', { ok: false, refusal: { status: null, message: 'MCP HTTP request timed out after 15000ms' } }), null);
