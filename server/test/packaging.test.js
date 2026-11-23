@@ -46,5 +46,5 @@ test('no source or doc still carries the settings or identity of the app this wa
 });
 
 test('compose passes a usable SHELF_URL so the header Shelf button shows in Docker', () => {
-  assert.match(read('docker-compose.yml'), /SHELF_URL:\s*\$\{SHELF_URL:-http:\/\/127\.0\.0\.1:4400\}/);
+  assert.match(read('docker-compose.yml'), /SHELF_URL:\s*\$\{SHELF_URL:-https:\/\/local\.ping-devops\.com:8443\/demo-shelf\}/);
 });
