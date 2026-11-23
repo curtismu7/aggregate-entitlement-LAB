@@ -168,7 +168,7 @@ export function replyOf(step, r, app) {
         ? done('allowed', 'tools-listed', `The gateway answered ${what} with ${n} tools for the agent key.`, { tools: n, ms: r.ms })
         : done('info', 'empty-list', `The gateway answered ${what} with no tools, so there is no usable listing to count as a pass.`, { tools: 0, ms: r.ms });
     }
-    if (r.isError === true) return done('refused', 'tool-error', `The gateway answered ${what} with a tool error (isError): the call was not carried out.`, { ms: r.ms });
+    if (r.isError === true) return done('info', 'tool-error', `The gateway answered ${what} with a tool error (isError): that is the tool's own outcome, not a policy stop, so it counts as information.`, { ms: r.ms });
     return typeof r.text === 'string' && r.text.length > 0
       ? done('allowed', 'tool-ran', `The gateway did not refuse ${what} and returned a tool result. A hidden name should be refused: check the aggregate's policy.`, { ms: r.ms })
       : done('info', 'no-content', `The gateway answered ${what} with no content, so the lab cannot read it as a tool result.`, { ms: r.ms });
@@ -179,13 +179,13 @@ export function replyOf(step, r, app) {
   const opening = `while the lab was opening or making ${what}`;
   const failed = (outcome, cause, message, detail) => ({ outcome, cause, message, detail: { during: step, app, ...detail } });
   const readAs = ` The lab's own reading, not a gateway field: ${reading}.`;
-  if (status === 401) return failed('refused', 'status-401', `The gateway answered HTTP 401 ${opening}: it did not accept the agent key.${readAs}`, { status, ms: r.ms, reading: f.layer });
+  if (status === 401) return failed('info', 'status-401', `The gateway answered HTTP 401 ${opening}: it did not accept the agent key. A credential check is information, not a policy decision.`, { status, ms: r.ms, reading: f.layer });
   if (status === 403) return failed('refused', 'status-403', `The gateway answered HTTP 403 ${opening}.${readAs}`, { status, ms: r.ms, reading: f.layer });
   if (status !== null) return failed('info', `status-${status}`, `The gateway answered HTTP ${status} ${opening}. That status is not a policy verdict, so it counts as information.`, { status, ms: r.ms });
   const text = String(f.message ?? '');
   if (NO_REPLY.test(text)) return null;
   if (UNREAD.test(text)) return failed('info', 'unreadable', `The lab could not read the gateway's answer ${opening} as a tool result, so it counts as information.`, { ms: r.ms });
-  return failed('refused', 'jsonrpc-error', `The gateway answered with a JSON-RPC error ${opening}, inside a successful HTTP reply. The lab reads that as a refusal.${readAs}`, { ms: r.ms, reading: f.layer });
+  return failed('info', 'jsonrpc-error', `The gateway answered with a JSON-RPC error ${opening}, inside a successful HTTP reply. The lab cannot tell a policy refusal from a fault, so it counts as information.`, { ms: r.ms, reading: f.layer });
 }
 
 // ---- Stdout lines ------------------------------------------------------------------------------------------------------------------------------------

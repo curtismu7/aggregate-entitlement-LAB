@@ -534,7 +534,7 @@ test('Real listing: one `response` row at the time the lab had the reply, one li
   }, { runLog });
 });
 
-test('Real call: the listing before it and the hidden name\'s refusal are two `response` rows, the refusal carries the lab\'s reading in its words, and nothing is claimed about Privilege', T, async () => {
+test('Real call: the listing before it and the hidden name\'s reply are two `response` rows, the reply carries the lab\'s reading in its words, is information, and nothing is claimed about Privilege', T, async () => {
   const { lines, runLog } = capture();
   await withGateway(async (app) => {
     const r = await rcall(app);
@@ -542,17 +542,18 @@ test('Real call: the listing before it and the hidden name\'s refusal are two `r
     const body = (await record(app, r.json.run.id)).json;
     const rec = body.record;
     assert.deepEqual(assertRunObservability(rec), []);
-    assert.deepEqual(shape(rec), [['gateway', 'allowed'], ['gateway', 'refused']]);
+    assert.deepEqual(shape(rec), [['gateway', 'allowed'], ['gateway', 'info']]);
+    assert.equal(rec.summary.refused, 0, 'a JSON-RPC error is a fault or a refusal the lab cannot tell apart: it is never counted as a refusal');
     assert.ok(rows(rec).every((x) => x.origin === 'response'));
     assert.match(rows(rec)[1].message, /while the lab was opening or making tools\/call for a hidden name/);
-    assert.match(rows(rec)[1].message, /The lab's own reading, not a gateway field: it matches check 4, the ToolFilter/);
+    assert.doesNotMatch(rows(rec)[1].message, /check 4|reading/, 'an information row names no check: the lab cannot tell which one a fault came from');
     assert.equal(rec.coverage.privilege, 'not-logged');
     assert.match(rec.reasons.privilege, /not read by this lab/);
     assert.equal(body.partial, false);
     assert.deepEqual(lines.map((x) => / step=(\S+)/.exec(x)[1]), ['gateway-list', 'gateway-call']);
     assert.deepEqual(lines.map((x) => x.split(' ')[0]), rows(rec).map((x) => x.at));
     assert.ok(Date.parse(lines[0].split(' ')[0]) <= Date.parse(lines[1].split(' ')[0]));
-    assert.ok(/ result=stopped cause=jsonrpc-error /.test(lines[1]));
+    assert.ok(/ result=unclear cause=jsonrpc-error /.test(lines[1]));
     lines.forEach(noMatcherReads);
   }, { runLog });
 });
@@ -571,15 +572,15 @@ test('the row time is the time of the reply, not of the session close that follo
   }, { runLog, gw: (gw) => { gw.deleteDelay = 700; } });
 });
 
-test('how each kind of reply is read: 401 and 403 refused, a usable 200 allowed, a JSON-RPC error or isError refused, an unparsed body or another status information', T, async () => {
+test('how each kind of reply is read: only a 403 is refused, a usable 200 allowed, a 401, a JSON-RPC error, an isError reply, an unparsed body or another status information', T, async () => {
   const cases = [
-    ['list', status(401), 'refused', /HTTP 401 while the lab was opening or making tools\/list/],
+    ['list', status(401), 'info', /HTTP 401 while the lab was opening or making tools\/list: it did not accept the agent key/],
     ['list', status(403), 'refused', /HTTP 403/],
     ['list', status(500), 'info', /HTTP 500.*not a policy verdict/],
-    ['list', rpcError('boom'), 'refused', /JSON-RPC error while the lab was opening or making tools\/list, inside a successful HTTP reply/],
+    ['list', rpcError('boom'), 'info', /JSON-RPC error while the lab was opening or making tools\/list, inside a successful HTTP reply/],
     ['list', rpcResult({ tools: [] }), 'info', /no tools/],
     ['list', rawText, 'info', /could not read the gateway's answer/],
-    ['call', rpcResult({ isError: true, content: [{ type: 'text', text: 'x' }] }), 'refused', /tool error \(isError\)/],
+    ['call', rpcResult({ isError: true, content: [{ type: 'text', text: 'x' }] }), 'info', /tool error \(isError\): that is the tool's own outcome, not a policy stop/],
     ['call', rpcResult({ content: [{ type: 'text', text: 'ran' }] }), 'allowed', /did not refuse tools\/call for a hidden name/],
     ['call', rpcResult({ content: [] }), 'info', /no content/],
     ['call', status(500), 'info', /HTTP 500/],
@@ -596,6 +597,7 @@ test('how each kind of reply is read: 401 and 403 refused, a usable 200 allowed,
       assert.equal(row.outcome, outcome, `${which} ${words}`);
       assert.match(row.message, words);
       assert.equal(row.origin, 'response');
+      assert.equal(rec.summary.refused, outcome === 'refused' ? 1 : 0, `${which} ${words}: only a policy stop counts as refused`);
     });
   }
 });
@@ -604,7 +606,7 @@ test('a refusal while the lab is opening a call is not worded as the answer to t
   await withGateway(async (app) => {
     const r = await rlist(app);
     const row = rows((await record(app, r.json.run.id)).json.record)[0];
-    assert.equal(row.outcome, 'refused');
+    assert.equal(row.outcome, 'info', 'a 401 is a credential check, not a policy decision');
     assert.match(row.message, /HTTP 401 while the lab was opening or making tools\/list/);
     assert.doesNotMatch(row.message, /answered tools\/list with/);
     assert.equal(row.detail.during, 'tools/list');

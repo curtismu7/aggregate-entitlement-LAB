@@ -61,6 +61,16 @@ describe("Mock: against the real simulated engine", () => {
     expect(panel()).not.toHaveTextContent(/tools\/call/);
   });
 
+  it("a policy edit after a call clears that call's record: the panel shows the new listing's, never the call's", async () => {
+    const user = userEvent.setup();
+    await openPage(user);
+    await callTool(user, "crm__update_customer");
+    await waitFor(() => expect(panel()).toHaveTextContent(/asked tools\/call for crm__update_customer/));
+    await user.click(screen.getByLabelText("crm ToolFilter includes update_customer"));
+    await waitFor(() => expect(panel()).toHaveTextContent(/asked tools\/list/));
+    expect(panel()).not.toHaveTextContent(/tools\/call/);
+  });
+
   it("never shows the previous record while the next listing is out: a listing delayed 2.5 s after a call shows the loading note for the whole wait", async () => {
     const user = userEvent.setup();
     await openPage(user);
