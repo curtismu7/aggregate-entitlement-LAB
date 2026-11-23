@@ -658,6 +658,19 @@ test('an isError reply is refused only when the lab reads its text as a refusal;
   assert.equal(replyOf('tools/call', rpc('boom'), 'full').cause, 'jsonrpc-error');
 });
 
+test('faults are information even when their words match a refusal check: a timed-out or unreachable JSON-RPC error, an unreachable isError reply and an unknown tool are not refusals (N1)', () => {
+  const isErr = (text) => ({ ok: true, isError: true, text, ms: 3 });
+  const rpc = (message) => ({ ok: false, refusal: { status: null, message, layer: readRefusal({ message }) }, ms: 3 });
+  assert.equal(replyOf('tools/call', rpc('request timed out after 15000ms'), 'full').outcome, 'info');
+  assert.equal(replyOf('tools/call', rpc('request timed out after 15000ms'), 'full').cause, 'jsonrpc-error');
+  assert.equal(replyOf('tools/call', isErr('member crm unreachable: connection refused'), 'full').outcome, 'info');
+  assert.equal(replyOf('tools/call', isErr('member crm unreachable: connection refused'), 'full').cause, 'tool-error');
+  assert.equal(replyOf('tools/call', rpc('unknown tool crm__export_all'), 'full').outcome, 'info');
+  assert.equal(replyOf('tools/call', rpc('unknown tool crm__export_all'), 'full').cause, 'jsonrpc-error');
+  assert.equal(replyOf('tools/call', rpc('refused by policy'), 'full').outcome, 'refused', 'a real policy refusal stays refused');
+  assert.equal(replyOf('tools/call', isErr('refused by policy'), 'full').outcome, 'refused', 'a real policy refusal in isError stays refused');
+});
+
 test('a gateway refusal that uses the shared client\'s own "unreachable" words is read as no connection, and is never shown as allowed (documented)', () => {
   assert.equal(replyOf('tools/list', { ok: false, refusal: { status: null, message: 'MCP HTTP request unreachable (ECONNREFUSED)' } }), null);
   assert.equal(replyOf('tools/call', { ok: false, refusal: { status: null, message: 'MCP HTTP request timed out after 15000ms' } }), null);

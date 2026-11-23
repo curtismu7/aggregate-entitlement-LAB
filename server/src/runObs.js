@@ -154,9 +154,9 @@ const READING = {
   other: 'it matches no known check',
 };
 
-// The four checks real.js readRefusal can match to a refusal. A JSON-RPC error or an isError reply that matches one is a policy stop as the lab reads it (F2, F3); any other
-// error is information, because the lab cannot tell a refusal from a fault.
-const REFUSAL_LAYERS = ['tool-filter', 'policy', 'unreachable', 'unknown'];
+// Only the two policy checks are a refusal: the ToolFilter ("not exposed by this aggregate") and the policy deny text. A JSON-RPC error or an isError reply that matches one is a policy
+// stop as the lab reads it (F2, F3). A reply that matches "unreachable", "timed out" or "unknown tool" is a fault, so it is information (N1), as is any other error.
+const REFUSAL_LAYERS = ['tool-filter', 'policy'];
 const readAsOf = (layer) => ` The lab's own reading, not a gateway field: ${READING[layer] ?? READING.other}.`;
 
 // One call's answer -> an event, or null when there was no reply (the call did not connect or timed out). Only the answer in hand is read: nothing from an earlier call. The
