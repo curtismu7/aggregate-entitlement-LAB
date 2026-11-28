@@ -18,6 +18,7 @@ Tier: Tester. See how an MCP aggregate lists only the tools each caller may use 
 - Product claims about the Ping release are simulated and UNVERIFIED on our tenant; say so. Never say "door" (say P1 Privilege Agent App).
 - The forbidden-strings gate (`npm run check:forbidden`, CI job `forbidden-strings`, secret `FORBIDDEN_STRINGS`) prints counts only. CI is GitHub-hosted, Node 26 only. Docker is OrbStack, never Docker Desktop.
 - No AI attribution anywhere (owner, 2026-11-07): no Co-Authored-By trailer and no "Generated with" line in commits, PR bodies or files; CI runs `scripts/check-no-ai-attribution.sh`.
+- Default story (owner, 2026-11-28): the Stories page opens on the `airlines` vertical, **AirGuard Airlines** (a fictional airline; cast Alice and Dave; `DEFAULT_VERTICAL` in `web/src/story/stories.js`). `banking` and `generic` stay selectable and a saved choice of either keeps working; an unknown saved id falls back to `airlines`. Retired brand names (Meridian Air, Skyline Air, Northwind, Contoso, Tessera and the older ones) must not appear in the airline run (`web/src/story/__tests__/stories.test.js`). The simulated gateway's members (crm, bill, wiki) are domain-free on purpose and are not airline-named.
 
 ## Shelf
 `docs/shelf-entry.json` registers the app (id `aggregate-entitlement-lab`, port 7802, tag `mcp`). Registry: `demo-shelf-LAB/data/demos.json`.
