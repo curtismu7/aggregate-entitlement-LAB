@@ -21,7 +21,7 @@ An MCP aggregate puts several MCP servers behind one gateway URL. Without a filt
 
 7. **What each layer logged for this run** (rule 27): the shared run-observability panel under the trace, for the one request the page just made. See below.
 
-Also: Stories (one story, with presenter mode, the Present button or the p key) and Limits (what a scan cannot catch). A banner on every page and in presenter mode says what is simulated.
+Also: Stories (one story, with presenter mode, the Present button or the p key; it opens on AirGuard Airlines, a fictional airline, and the Vertical menu also offers Bank and Generic) and Limits (what a scan cannot catch). A banner on every page and in presenter mode says what is simulated.
 
 ## Run it
 

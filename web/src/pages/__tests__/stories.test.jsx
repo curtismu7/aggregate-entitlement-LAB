@@ -14,16 +14,32 @@ describe("Stories page and presenter mode", () => {
     const user = userEvent.setup();
     render(<App />);
     const panel = await screen.findByTestId("story-panel");
-    expect(panel).toHaveTextContent("Ada sees only what Ada may use");
+    expect(screen.getByLabelText("Vertical")).toHaveValue("airlines");
+    expect(panel).toHaveTextContent("Story MT3 · AirGuard Airlines");
+    expect(panel).toHaveTextContent("Alice sees only what Alice may use");
+    expect(panel).not.toHaveTextContent(/Meridian|Skyline|Northwind|Contoso|Tessera/);
     await user.selectOptions(screen.getByLabelText("Vertical"), "banking");
     expect(panel).toHaveTextContent("Priya sees only what Priya may use");
+    await user.selectOptions(screen.getByLabelText("Vertical"), "generic");
+    expect(panel).toHaveTextContent("Ada sees only what Ada may use");
     await user.selectOptions(screen.getByLabelText("Vertical"), "airlines");
-    expect(panel).toHaveTextContent("Mark sees only what Mark may use");
+    expect(panel).toHaveTextContent("Alice sees only what Alice may use");
     expect(panel).not.toHaveTextContent("⟨missing");
     await user.click(screen.getByRole("button", { name: /^6\s*Scan as each caller/ }));
     expect(panel).toHaveTextContent("Scan as each caller");
     await user.click(screen.getByRole("button", { name: "Everything listed" }));
     expect(panel).not.toHaveTextContent("⟨missing");
+  });
+
+  it("a saved banking choice keeps working and an unknown saved id falls back to AirGuard Airlines", async () => {
+    mockServer();
+    localStorage.setItem("aggentitlement.story.vertical", "banking");
+    const { unmount } = render(<App />);
+    expect(await screen.findByTestId("story-panel")).toHaveTextContent("Priya sees only what Priya may use");
+    unmount(); cleanup();
+    localStorage.setItem("aggentitlement.story.vertical", "no-such-pack");
+    render(<App />);
+    expect(await screen.findByTestId("story-panel")).toHaveTextContent("Story MT3 · AirGuard Airlines");
   });
 
   it("presenter mode shows a Step N of M bar, steps with the arrow keys and exits with Escape", async () => {

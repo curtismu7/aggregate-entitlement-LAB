@@ -79,5 +79,35 @@ describe("fill", () => {
     expect(fillAll(src, v)).toEqual({ t: "Ada" });
     expect(src.t).toBe("{{ada}}");
   });
-  it("falls back to generic for an unknown vertical", () => expect(verticalById("nope").id).toBe(DEFAULT_VERTICAL));
+  it("falls back to the default (airlines) for an unknown vertical", () => {
+    expect(DEFAULT_VERTICAL).toBe("airlines");
+    expect(verticalById("nope").id).toBe("airlines");
+    expect(verticalById(undefined).id).toBe("airlines");
+  });
+});
+
+describe("AirGuard Airlines is the default story", () => {
+  const RETIRED = ["Meridian Air", "Meridian Journeys", "Skyline Air", "Northwind", "Contoso", "Tessera", "Fabrikam", "Harbor", "Vellum"];
+  const airline = verticalById(DEFAULT_VERTICAL);
+  const run = JSON.stringify([fillAll(STORIES, airline), airline]);
+  it("the default pack names AirGuard Airlines and its cast", () => {
+    expect(airline.displayName).toBe("AirGuard Airlines");
+    expect(run).toMatch(/AirGuard Airlines/);
+    expect(airline.cast.ada.name).toBe("Alice");
+    expect(airline.cast.sam.name).toBe("Dave");
+  });
+  it("the airline run holds no retired brand and no undefined token", () => {
+    for (const name of RETIRED) expect(run, name).not.toContain(name);
+    expect(run).not.toContain("⟨missing");
+  });
+  it("a story naming a token the airline pack does not define shows it as missing", () => {
+    const bad = JSON.stringify(fillAll({ ...good(), goal: "{{nobody}} and {{vocab.nothing}}" }, airline));
+    expect(bad).toContain("⟨missing: nobody⟩");
+    expect(bad).toContain("⟨missing: vocab.nothing⟩");
+  });
+  it("the other packs still render their own names", () => {
+    expect(verticalById("banking").displayName).toBe("Bank");
+    expect(JSON.stringify(fillAll(STORIES, verticalById("banking")))).toContain("Priya");
+    expect(verticalById("generic").displayName).toBe("Generic");
+  });
 });
